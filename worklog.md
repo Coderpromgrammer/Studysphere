@@ -24,3 +24,32 @@ Stage Summary:
 - Chat is fully stateless - no DB persistence
 - All builds passing
 - Code pushed to GitHub
+
+---
+Task ID: 4
+Agent: main
+Task: Fix AI API using uploaded workspace method, fix quiz redirect, add Clerk profile settings, delete chat DB
+
+Work Log:
+- Analyzed uploaded workspace (workspace-16ab60fc) to understand original API integration pattern
+- Found workspace uses HuggingFace Qwen/Qwen3-235B-A22B via /v1/chat/completions as PRIMARY, z-ai-web-dev-sdk as FALLBACK
+- Found workspace has organized AI utilities: prompts.ts, parser.ts, rate-limit.ts, router.ts
+- Created src/lib/ai/prompts.ts with buildChatPrompt, buildQuizPrompt, buildSolvePrompt
+- Created src/lib/ai/parser.ts with parseQuizResponse (handles JSON blocks, markdown, arrays)
+- Created src/lib/ai/rate-limit.ts with in-memory rate limiting (20 req/min)
+- Rewrote /api/chat/route.ts: HF Qwen3-235B-A22B as PRIMARY via /v1/chat/completions, z-ai as FALLBACK
+- Rewrote /api/quiz/generate/route.ts: same pattern with proper quiz prompt templates and robust parsing
+- Created /api/chat/clear/route.ts: endpoint to drop chatmessages/chats collections from DB
+- Updated ProfilePanel with Clerk profile management: Edit Profile, Security, Connected Accounts buttons via window.Clerk.openUserProfile()
+- Added Data Management section with Clear Chat Data button
+- Added Sign Out button in profile using useAuth().signOut()
+- Fixed TypeScript errors: role type union, getResultMessage return type, UserButton prop compatibility
+- Build successful, pushed to GitHub
+
+Stage Summary:
+- AI API now uses HuggingFace Qwen3-235B-A22B as primary (same as uploaded workspace), z-ai as fallback
+- Chat is fully stateless - no DB persistence, clear chat data endpoint available
+- Profile section has Clerk account management (Edit Profile, Security, Connected Accounts, Sign Out)
+- Rate limiting added for all AI endpoints (20 req/min)
+- Quiz generation has robust JSON parsing with multiple fallback strategies
+- All builds passing, code pushed to GitHub
