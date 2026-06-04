@@ -99,12 +99,7 @@
   body { @apply bg-background text-foreground; font-family: 'Outfit', sans-serif; }
 }
 
-/* ─── Grain Overlay ─── */
-.grain-overlay {
-  position: fixed; inset: 0; pointer-events: none; z-index: 50;
-  opacity: 0.35; mix-blend-mode: overlay;
-}
-.grain-overlay svg { width: 100%; height: 100%; }
+
 
 /* ─── Glass ─── */
 .glass {
