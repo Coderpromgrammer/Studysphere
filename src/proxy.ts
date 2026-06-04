@@ -1,4 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
@@ -7,11 +9,17 @@ const isPublicRoute = createRouteMatcher([
   '/api/(.*)',
 ])
 
-export default clerkMiddleware(async (auth, request) => {
+// Clerk middleware handler
+const clerkHandler = clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {
     await auth.protect()
   }
 })
+
+// Next.js 16 proxy convention: export a function named `proxy`
+export function proxy(request: NextRequest) {
+  return clerkHandler(request, {} as any)
+}
 
 export const config = {
   matcher: [
