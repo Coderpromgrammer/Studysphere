@@ -1,0 +1,174 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Softly Design System Colors */
+  --color-softly-bg: #FDFCF8;
+  --color-softly-coral: #FFB7B2;
+  --color-softly-coral-light: #FFC8C4;
+  --color-softly-coral-glow: rgba(255,183,178,0.45);
+  --color-softly-sage: #E8EFE8;
+  --color-softly-lavender: #EFEDF4;
+  --color-softly-peach: #FFE4E1;
+  --color-softly-dark: #292524;
+  --color-softly-muted: #78716C;
+  --color-softly-stone-100: #F5F5F4;
+  --color-softly-stone-200: #E7E5E4;
+  --color-softly-glass: rgba(255,255,255,0.72);
+  --color-softly-glass-strong: rgba(255,255,255,0.92);
+  --color-softly-error: #F87171;
+  --color-softly-success: #86EFAC;
+  --color-softly-warning: #FCD34D;
+
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+  --radius-pill: 9999px;
+
+  --font-sans: 'Outfit', sans-serif;
+  --font-accent: 'Reenie Beanie', cursive;
+}
+
+:root {
+  --radius: 1rem;
+  --background: #FDFCF8;
+  --foreground: #292524;
+  --card: rgba(255,255,255,0.72);
+  --card-foreground: #292524;
+  --popover: rgba(255,255,255,0.92);
+  --popover-foreground: #292524;
+  --primary: #FFB7B2;
+  --primary-foreground: #292524;
+  --secondary: rgba(255,255,255,0.72);
+  --secondary-foreground: #292524;
+  --muted: #F5F5F4;
+  --muted-foreground: #78716C;
+  --accent: #EFEDF4;
+  --accent-foreground: #292524;
+  --destructive: #F87171;
+  --border: #E7E5E4;
+  --input: #E7E5E4;
+  --ring: #FFB7B2;
+}
+
+.dark {
+  --background: #1c1917;
+  --foreground: #FDFCF8;
+  --card: rgba(41,37,36,0.72);
+  --card-foreground: #FDFCF8;
+  --popover: rgba(41,37,36,0.92);
+  --popover-foreground: #FDFCF8;
+  --primary: #FFB7B2;
+  --primary-foreground: #292524;
+  --secondary: rgba(41,37,36,0.72);
+  --secondary-foreground: #FDFCF8;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: rgba(239,237,244,0.15);
+  --accent-foreground: #FDFCF8;
+  --destructive: #F87171;
+  --border: rgba(255,255,255,0.10);
+  --input: rgba(255,255,255,0.15);
+  --ring: #FFB7B2;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; font-family: 'Outfit', sans-serif; }
+}
+
+/* ─── Grain Overlay ─── */
+.grain-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  opacity: 0.35; mix-blend-mode: overlay;
+}
+.grain-overlay svg { width: 100%; height: 100%; }
+
+/* ─── Glass ─── */
+.glass {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.glass-strong {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+/* ─── Blob Shape ─── */
+.blob-shape { border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; }
+
+/* ─── Animations ─── */
+@keyframes softly-reveal {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes softly-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes softly-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes softly-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes softly-breathe {
+  0%, 100% { stroke-dashoffset: 326.7; }
+  50% { stroke-dashoffset: 0; }
+}
+@keyframes softly-scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-softly-reveal { animation: softly-reveal 0.8s ease-out forwards; }
+.animate-softly-float { animation: softly-float 6s ease-in-out infinite; }
+.animate-softly-fade-in { animation: softly-fade-in 0.4s ease forwards; }
+.animate-softly-shimmer { background-size: 200% 100%; animation: softly-shimmer 1.6s ease-in-out infinite; }
+.animate-softly-scale-in { animation: softly-scale-in 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+.spring-transition { transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* ─── Custom Scrollbar ─── */
+.softly-scrollbar::-webkit-scrollbar { width: 4px; }
+.softly-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.softly-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,183,178,0.5); border-radius: 9999px; }
+.softly-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(255,183,178,0.5) transparent; }
+
+/* ─── Ruled Lines ─── */
+.ruled-lines {
+  background-image: repeating-linear-gradient(transparent, transparent 27px, rgba(0,0,0,0.04) 27px, rgba(0,0,0,0.04) 28px);
+}
+
+/* ─── Font Accent ─── */
+.font-accent { font-family: 'Reenie Beanie', cursive; }
