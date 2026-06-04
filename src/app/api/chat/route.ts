@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { chatMessages, ObjectId } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
 
 export async function GET(req: NextRequest) {
@@ -8,12 +8,22 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
-    const messages = await db.chatMessage.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-      take: 50,
-    });
-    return NextResponse.json({ messages });
+    const collection = await chatMessages();
+    const messages = await collection
+      .find({ userId })
+      .sort({ createdAt: 1 })
+      .limit(50)
+      .toArray();
+
+    const serialized = messages.map(m => ({
+      id: m._id.toString(),
+      role: m.role,
+      content: m.content,
+      userId: m.userId,
+      createdAt: m.createdAt,
+    }));
+
+    return NextResponse.json({ messages: serialized });
   } catch (error) {
     console.error('Chat GET:', error);
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
@@ -28,9 +38,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'userId and message required' }, { status: 400 });
     }
 
+    const collection = await chatMessages();
+
     // Save user message
-    await db.chatMessage.create({
-      data: { userId, role: 'user', content: message },
+    await collection.insertOne({
+      userId,
+      role: 'user',
+      content: message,
+      createdAt: new Date(),
     });
 
     // Get AI response
@@ -54,8 +69,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Save AI message
-    await db.chatMessage.create({
-      data: { userId, role: 'assistant', content: aiResponse },
+    await collection.insertOne({
+      userId,
+      role: 'assistant',
+      content: aiResponse,
+      createdAt: new Date(),
     });
 
     return NextResponse.json({ response: aiResponse });

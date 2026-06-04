@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { moodLogs, ObjectId } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,12 +7,23 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
-    const moods = await db.moodLog.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 30,
-    });
-    return NextResponse.json({ moods });
+    const collection = await moodLogs();
+    const moods = await collection
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .toArray();
+
+    // Serialize ObjectIds
+    const serialized = moods.map(m => ({
+      id: m._id.toString(),
+      mood: m.mood,
+      note: m.note,
+      userId: m.userId,
+      createdAt: m.createdAt,
+    }));
+
+    return NextResponse.json({ moods: serialized });
   } catch (error) {
     console.error('Mood GET:', error);
     return NextResponse.json({ error: 'Failed to fetch moods' }, { status: 500 });
@@ -26,10 +37,24 @@ export async function POST(req: NextRequest) {
     if (!userId || !mood) {
       return NextResponse.json({ error: 'userId and mood required' }, { status: 400 });
     }
-    const moodLog = await db.moodLog.create({
-      data: { userId, mood, note: note || '' },
+
+    const collection = await moodLogs();
+    const result = await collection.insertOne({
+      userId,
+      mood,
+      note: note || '',
+      createdAt: new Date(),
     });
-    return NextResponse.json({ moodLog }, { status: 201 });
+
+    return NextResponse.json({
+      moodLog: {
+        id: result.insertedId.toString(),
+        userId,
+        mood,
+        note: note || '',
+        createdAt: new Date(),
+      },
+    }, { status: 201 });
   } catch (error) {
     console.error('Mood POST:', error);
     return NextResponse.json({ error: 'Failed to log mood' }, { status: 500 });

@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   clerkId   String   @unique
   email     String
   name      String?
@@ -22,42 +22,42 @@ model User {
 }
 
 model MoodLog {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   mood      String
   note      String?
-  userId    String
+  userId    String   @db.ObjectId
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   role      String
   content   String
-  userId    String
+  userId    String   @db.ObjectId
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Quiz {
-  id          String         @id @default(cuid())
-  title       String
-  topic       String
-  difficulty  String
-  score       Int?
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  topic         String
+  difficulty    String
+  score         Int?
   totalQuestions Int
-  completedAt DateTime?
-  userId      String
-  createdAt   DateTime       @default(now())
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  questions   QuizQuestion[]
+  completedAt   DateTime?
+  userId        String         @db.ObjectId
+  createdAt     DateTime       @default(now())
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions     QuizQuestion[]
 }
 
 model QuizQuestion {
-  id          String   @id @default(cuid())
-  question    String
-  options     String   // JSON string of options array
-  correctIdx  Int      // index of correct option
-  quizId      String
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  question   String
+  options    String   // JSON string of options array
+  correctIdx Int      // index of correct option
+  quizId     String   @db.ObjectId
+  quiz       Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
 }
