@@ -1,5 +1,5 @@
 // ==========================================
-// AI Quiz Generation API — HuggingFace (Qwen3) + z-ai fallback
+// AI Quiz Generation API — Ollama (Qwen3.5) + z-ai fallback
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,9 +7,8 @@ import { buildQuizPrompt } from '@/lib/ai/prompts';
 import { parseQuizResponse } from '@/lib/ai/parser';
 import { checkRateLimit } from '@/lib/ai/rate-limit';
 
-const HF_MODEL = 'Qwen/Qwen3-235B-A22B';
-const HF_CHAT_URL = `https://api-inference.huggingface.co/models/${HF_MODEL}/v1/chat/completions`;
-const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen3.5:latest';
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,38 +37,50 @@ export async function POST(req: NextRequest) {
     const prompt = buildQuizPrompt(topic.trim(), diff, count);
 
     const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
-      { role: 'system', content: 'You are a quiz generator. Return only valid JSON.' },
+      { role: 'system', content: 'You are a quiz generator. Return only valid JSON. Do not include any thinking or reasoning tags.' },
       { role: 'user', content: prompt },
     ];
 
     let content = '';
 
-    // PRIMARY: Try HuggingFace Chat Completions API with Qwen3
-    if (HF_TOKEN) {
-      try {
-        const response = await fetch(HF_CHAT_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${HF_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: HF_MODEL,
-            messages,
-            max_tokens: 4096,
-            temperature: 0.4,
-          }),
-        });
+    // PRIMARY: Try Ollama Chat Completions API
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for quiz gen
 
-        if (response.ok) {
-          const data = await response.json();
-          content = data.choices?.[0]?.message?.content || '';
-        } else {
-          const errorText = await response.text();
-          console.error('HF Chat API error for quiz:', response.status, errorText);
+      const response = await fetch(`${OLLAMA_BASE_URL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          messages,
+          max_tokens: 4096,
+          temperature: 0.4,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        content = data.choices?.[0]?.message?.content || '';
+        if (content) {
+          // Strip <think/> tags that Qwen3.5 may include
+          content = content.replace(/<think[\s\S]*?<\/think>/g, '').trim();
         }
-      } catch (error) {
-        console.error('HuggingFace Chat API failed for quiz:', error);
+      } else {
+        const errorText = await response.text();
+        console.error('Ollama Quiz API error:', response.status, errorText);
+      }
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.name === 'AbortError') {
+        console.error('Ollama Quiz API timeout');
+      } else {
+        console.error('Ollama Quiz API failed:', err.message);
       }
     }
 
@@ -84,6 +95,9 @@ export async function POST(req: NextRequest) {
           temperature: 0.4,
         });
         content = completion.choices?.[0]?.message?.content || '';
+        if (content) {
+          content = content.trim();
+        }
       } catch (error) {
         console.error('z-ai fallback failed for quiz:', error);
       }
@@ -91,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     if (!content) {
       return NextResponse.json(
-        { error: 'Failed to generate quiz. All AI providers unavailable. Please try again.' },
+        { error: 'Failed to generate quiz. Make sure Ollama is running with `ollama serve` and model `qwen3.5` is pulled with `ollama pull qwen3.5`.' },
         { status: 500 }
       );
     }

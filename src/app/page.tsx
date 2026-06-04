@@ -63,10 +63,12 @@ const QUOTES = [
 ];
 
 const CHAT_SUGGESTIONS = [
-  { label: 'Study tips', message: 'Give me some effective study tips' },
+  { label: 'Study tips', message: 'Give me some effective study tips for CBSE board exams' },
   { label: 'Motivation', message: 'I need some motivation to keep studying' },
-  { label: 'Explain a topic', message: 'Can you help me understand a difficult topic?' },
-  { label: 'Time management', message: 'How can I manage my study time better?' },
+  { label: 'Explain a topic', message: 'Can you help me understand photosynthesis in simple terms?' },
+  { label: 'Solve a doubt', message: 'Solve this step by step: Find the area of a triangle with base 8cm and height 5cm' },
+  { label: 'Time management', message: 'How can I manage my study time better for Class 10 boards?' },
+  { label: 'Essay help', message: 'Help me write an outline for an essay on climate change' },
 ];
 
 /* ─── Sidebar ─── */
@@ -176,8 +178,8 @@ function MoodSelector({ userId, onLogged }: { userId: string; onLogged: () => vo
 }
 
 /* ─── Dashboard Panel ─── */
-function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
-  dbUser: DbUser; moods: MoodLog[]; quizzes: QuizData[]; onRefreshMoods: () => void;
+function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: {
+  dbUser: DbUser; moods: MoodLog[]; quizzes: QuizData[]; onRefreshMoods: () => void; onNavigate: (tab: TabType) => void;
 }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -195,6 +197,13 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
     { label: 'Avg Score', value: `${avgScore}%`, icon: <Target className="w-5 h-5 text-softly-coral" /> },
     { label: 'Total Quizzes', value: quizzes.length, icon: <BookOpen className="w-5 h-5 text-softly-coral" /> },
     { label: 'Study Streak', value: `${studyStreak}d`, icon: <Flame className="w-5 h-5 text-softly-coral" /> },
+  ];
+
+  const quickActions = [
+    { label: 'Generate Quiz', desc: 'Create an AI quiz on any topic', icon: <Brain className="w-5 h-5 text-softly-coral" />, tab: 'quiz' as TabType },
+    { label: 'Ask AI Buddy', desc: 'Chat with your study companion', icon: <MessageCircle className="w-5 h-5 text-violet-600" />, tab: 'chat' as TabType },
+    { label: 'Take a Quiz', desc: 'Browse your quiz history', icon: <Wand2 className="w-5 h-5 text-rose-500" />, tab: 'quiz' as TabType },
+    { label: 'Edit Profile', desc: 'Update your account settings', icon: <Settings className="w-5 h-5 text-softly-muted" />, tab: 'profile' as TabType },
   ];
 
   return (
@@ -222,7 +231,28 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
         ))}
       </motion.div>
 
-      {/* Mood Check-in + Quick Actions */}
+      {/* Quick Actions */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <h2 className="text-lg font-semibold text-softly-dark flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-softly-coral" />
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {quickActions.map((action, i) => (
+            <motion.button key={action.label} onClick={() => onNavigate(action.tab)}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }}
+              className="glass rounded-2xl p-4 text-left hover:-translate-y-1 transition-transform group">
+              <div className="w-10 h-10 rounded-xl bg-softly-stone-100 flex items-center justify-center group-hover:bg-softly-coral/10 transition-colors mb-3">
+                {action.icon}
+              </div>
+              <p className="text-sm font-medium text-softly-dark">{action.label}</p>
+              <p className="text-xs text-softly-muted mt-0.5">{action.desc}</p>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Mood Check-in + Quick Overview */}
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="glass rounded-2xl p-6">
@@ -259,6 +289,10 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
             <div className="flex items-center justify-between">
               <span className="text-sm text-softly-muted">Best topic</span>
               <span className="text-sm font-semibold text-softly-dark">{completedQuizzes[0]?.topic || '—'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">AI Model</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700 flex items-center gap-1"><Cpu className="w-3 h-3" /> Ollama Qwen3.5</span>
             </div>
           </div>
         </motion.div>
@@ -297,7 +331,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
           <div className="glass rounded-2xl p-8 text-center">
             <Brain className="w-8 h-8 text-softly-coral mx-auto mb-3" />
             <p className="text-softly-muted mb-1">No quizzes yet</p>
-            <p className="font-accent text-xl text-softly-coral">take your first quiz!</p>
+            <button onClick={() => onNavigate('quiz')} className="font-accent text-xl text-softly-coral hover:underline">take your first quiz!</button>
           </div>
         )}
       </motion.div>
@@ -745,7 +779,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
             <h1 className="text-2xl font-bold text-softly-dark">AI Study Buddy</h1>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <p className="text-xs text-softly-muted">Powered by AI</p>
+              <p className="text-xs text-softly-muted">Ollama Qwen3.5</p>
             </div>
           </div>
         </div>
@@ -832,7 +866,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
             <Send className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-[10px] text-softly-muted text-center mt-2">iStud AI powered by Qwen3.6-27B Samantha</p>
+        <p className="text-[10px] text-softly-muted text-center mt-2">iStud AI powered by Ollama Qwen3.5</p>
       </div>
     </div>
   );
@@ -844,12 +878,43 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
   const [sounds, setSounds] = useState(false);
   const [studyMode, setStudyMode] = useState('balanced');
   const [clearing, setClearing] = useState(false);
-  const { signOut } = useAuth();
+  const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
+  const [ollamaModel, setOllamaModel] = useState('qwen3.5:latest');
+  const [showOllamaConfig, setShowOllamaConfig] = useState(false);
+  const [testingOllama, setTestingOllama] = useState(false);
+  const { signOut, userId: clerkId } = useAuth();
+  const { user: clerkUser } = useUser();
+
+  // Load saved preferences from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('istud-preferences');
+      if (saved) {
+        const prefs = JSON.parse(saved);
+        if (prefs.notifs !== undefined) setNotifs(prefs.notifs);
+        if (prefs.sounds !== undefined) setSounds(prefs.sounds);
+        if (prefs.studyMode) setStudyMode(prefs.studyMode);
+      }
+      const ollamaSaved = localStorage.getItem('istud-ollama');
+      if (ollamaSaved) {
+        const ollama = JSON.parse(ollamaSaved);
+        if (ollama.url) setOllamaUrl(ollama.url);
+        if (ollama.model) setOllamaModel(ollama.model);
+      }
+    } catch {}
+  }, []);
+
+  // Save preferences to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('istud-preferences', JSON.stringify({ notifs, sounds, studyMode }));
+    } catch {}
+  }, [notifs, sounds, studyMode]);
 
   const handleClearChatData = async () => {
     setClearing(true);
     try {
-      const res = await fetch(`/api/chat/clear?userId=${dbUser.id}`, { method: 'DELETE' });
+      const res = await fetch('/api/chat/clear', { method: 'DELETE' });
       if (res.ok) {
         toast.success('Chat data cleared from database');
       } else {
@@ -861,6 +926,39 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
     setClearing(false);
   };
 
+  const handleSaveOllamaConfig = () => {
+    try {
+      localStorage.setItem('istud-ollama', JSON.stringify({ url: ollamaUrl, model: ollamaModel }));
+      toast.success('Ollama configuration saved. Restart the server for changes to take effect.');
+    } catch {
+      toast.error('Failed to save Ollama configuration');
+    }
+  };
+
+  const handleTestOllama = async () => {
+    setTestingOllama(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Hello, are you working?' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.response && !data.response.includes('connection issues')) {
+          toast.success('Ollama is working!');
+        } else {
+          toast.error('Ollama is not responding. Make sure it is running.');
+        }
+      } else {
+        toast.error('API error. Check your Ollama configuration.');
+      }
+    } catch {
+      toast.error('Failed to connect to API');
+    }
+    setTestingOllama(false);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div><h1 className="text-3xl font-bold text-softly-dark">Profile</h1><p className="text-softly-muted mt-1">Manage your account and preferences</p></div>
@@ -869,12 +967,16 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
       <div className="glass-strong rounded-2xl p-6 relative overflow-hidden">
         <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
         <div className="relative z-10 flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center ring-2 ring-softly-coral/30">
-            <span className="text-2xl font-bold text-softly-coral">{dbUser.name?.[0]?.toUpperCase() || 'U'}</span>
-          </div>
+          {clerkUser?.imageUrl ? (
+            <img src={clerkUser.imageUrl} alt="Avatar" className="w-16 h-16 rounded-full ring-2 ring-softly-coral/30 object-cover" />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center ring-2 ring-softly-coral/30">
+              <span className="text-2xl font-bold text-softly-coral">{dbUser.name?.[0]?.toUpperCase() || 'U'}</span>
+            </div>
+          )}
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-softly-dark">{dbUser.name || 'Student'}</h2>
-            <p className="text-sm text-softly-muted">{dbUser.email}</p>
+            <h2 className="text-xl font-bold text-softly-dark">{clerkUser?.fullName || dbUser.name || 'Student'}</h2>
+            <p className="text-sm text-softly-muted">{clerkUser?.emailAddresses?.[0]?.emailAddress || dbUser.email}</p>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-coral/20 text-softly-coral flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Active</span>
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700">Free Plan</span>
@@ -882,13 +984,12 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <a
-              href="javascript:void(0)"
-              onClick={() => { try { (window as any).Clerk?.openUserProfile(); } catch {} }}
+            <button
+              onClick={() => { try { (window as any).Clerk?.openUserProfile(); } catch(e) { console.error('Clerk profile error:', e); } }}
               className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-2 cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5" /> Edit Profile
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -896,10 +997,10 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
       {/* Account Settings via Clerk */}
       <div className="glass rounded-2xl p-6 space-y-5">
         <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><User className="w-5 h-5 text-softly-coral" /> Account Settings</h3>
-        <p className="text-sm text-softly-muted">Manage your name, email, password, and connected accounts through your secure profile.</p>
+        <p className="text-sm text-softly-muted">Manage your name, email, password, and connected accounts through your secure Clerk profile.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
-            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'profile' }); } catch {} }}
+            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'profile' }); } catch(e) { console.error(e); } }}
             className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><Pencil className="w-5 h-5" /></div>
@@ -909,7 +1010,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
             </div>
           </button>
           <button
-            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'account' }); } catch {} }}
+            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'account' }); } catch(e) { console.error(e); } }}
             className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><Shield className="w-5 h-5" /></div>
@@ -919,7 +1020,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
             </div>
           </button>
           <button
-            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'connectedAccounts' }); } catch {} }}
+            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'connectedAccounts' }); } catch(e) { console.error(e); } }}
             className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><ExternalLink className="w-5 h-5" /></div>
@@ -939,6 +1040,56 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
             </div>
           </button>
         </div>
+      </div>
+
+      {/* Ollama AI Configuration */}
+      <div className="glass rounded-2xl p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Cpu className="w-5 h-5 text-softly-coral" /> AI Configuration</h3>
+          <button onClick={() => setShowOllamaConfig(!showOllamaConfig)}
+            className="h-8 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-1.5">
+            {showOllamaConfig ? 'Hide' : 'Configure'}
+          </button>
+        </div>
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-softly-sage/20 border border-green-200">
+          <Cpu className="w-5 h-5 text-green-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-green-700">Ollama {ollamaModel}</p>
+            <p className="text-xs text-green-600">Running at {ollamaUrl}</p>
+          </div>
+        </div>
+        {showOllamaConfig && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 overflow-hidden">
+            <div>
+              <label className="text-sm font-medium text-softly-dark mb-2 block">Ollama Server URL</label>
+              <input type="text" value={ollamaUrl} onChange={e => setOllamaUrl(e.target.value)}
+                placeholder="http://localhost:11434"
+                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+              <p className="text-xs text-softly-muted mt-1">Default: http://localhost:11434 (change this in .env for server-side)</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-softly-dark mb-2 block">Model Name</label>
+              <input type="text" value={ollamaModel} onChange={e => setOllamaModel(e.target.value)}
+                placeholder="qwen3.5:latest"
+                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+              <p className="text-xs text-softly-muted mt-1">Make sure the model is pulled: <code className="bg-softly-stone-100 px-1 rounded">ollama pull qwen3.5</code></p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleTestOllama} disabled={testingOllama}
+                className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all disabled:opacity-50 flex items-center gap-2">
+                {testingOllama ? (
+                  <><div className="w-3 h-3 border-2 border-softly-stone-300 border-t-softly-coral rounded-full animate-spin" /> Testing...</>
+                ) : (
+                  <><Zap className="w-3.5 h-3.5" /> Test Connection</>
+                )}
+              </button>
+              <button onClick={handleSaveOllamaConfig}
+                className="h-9 px-4 rounded-full bg-softly-coral text-softly-dark text-xs font-medium shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light transition-all flex items-center gap-2">
+                <CheckCircle className="w-3.5 h-3.5" /> Save Config
+              </button>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Preferences */}
@@ -1136,7 +1287,7 @@ export default function IStudApp() {
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <motion.div key="dashboard" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-              <DashboardPanel dbUser={dbUser} moods={moods} quizzes={quizzes} onRefreshMoods={fetchMoods} />
+              <DashboardPanel dbUser={dbUser} moods={moods} quizzes={quizzes} onRefreshMoods={fetchMoods} onNavigate={setActiveTab} />
             </motion.div>
           )}
           {activeTab === 'quiz' && (
