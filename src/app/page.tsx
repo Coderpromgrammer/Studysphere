@@ -10,7 +10,8 @@ import {
   ChevronRight, Moon, Sun, Cloud, CloudRain, Zap,
   FileText, Target, BookOpen, Heart, Leaf, Flame,
   Cpu, Copy, ThumbsUp, RefreshCw, Quote, Clock,
-  BarChart3, GraduationCap, Settings, Keyboard, Volume2
+  BarChart3, GraduationCap, Settings, Keyboard, Volume2,
+  Pencil, ExternalLink, Shield, LogOut
 } from 'lucide-react';
 
 /* ─── Types ─── */
@@ -102,7 +103,7 @@ function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType)
       </nav>
       <div className="p-3 border-t border-softly-stone-200/60">
         <div className="flex items-center gap-2 px-2">
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </div>
       </div>
     </aside>
@@ -476,7 +477,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
   };
 
   const getResultMessage = () => {
-    if (!quizQuestions) return '';
+    if (!quizQuestions) return { text: '', icon: <Trophy className="w-6 h-6 text-softly-coral" /> };
     const pct = score / quizQuestions.length;
     if (pct === 1) return { text: 'Perfect score!', icon: <Trophy className="w-6 h-6 text-softly-coral" /> };
     if (pct >= 0.7) return { text: 'Great job!', icon: <ThumbsUp className="w-6 h-6 text-green-600" /> };
@@ -842,18 +843,36 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
   const [notifs, setNotifs] = useState(true);
   const [sounds, setSounds] = useState(false);
   const [studyMode, setStudyMode] = useState('balanced');
+  const [clearing, setClearing] = useState(false);
+  const { signOut } = useAuth();
+
+  const handleClearChatData = async () => {
+    setClearing(true);
+    try {
+      const res = await fetch(`/api/chat/clear?userId=${dbUser.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Chat data cleared from database');
+      } else {
+        toast.error('Failed to clear chat data');
+      }
+    } catch {
+      toast.error('Failed to clear chat data');
+    }
+    setClearing(false);
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div><h1 className="text-3xl font-bold text-softly-dark">Profile</h1><p className="text-softly-muted mt-1">Manage your account and preferences</p></div>
 
+      {/* User Info Card with Clerk Profile Edit */}
       <div className="glass-strong rounded-2xl p-6 relative overflow-hidden">
         <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
         <div className="relative z-10 flex items-center gap-5">
           <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center ring-2 ring-softly-coral/30">
             <span className="text-2xl font-bold text-softly-coral">{dbUser.name?.[0]?.toUpperCase() || 'U'}</span>
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-softly-dark">{dbUser.name || 'Student'}</h2>
             <p className="text-sm text-softly-muted">{dbUser.email}</p>
             <div className="flex items-center gap-2 mt-2">
@@ -862,9 +881,67 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-lavender/40 text-violet-600 flex items-center gap-1"><Brain className="w-3 h-3" /> {quizCount} Quizzes</span>
             </div>
           </div>
+          <div className="flex flex-col gap-2">
+            <a
+              href="javascript:void(0)"
+              onClick={() => { try { (window as any).Clerk?.openUserProfile(); } catch {} }}
+              className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" /> Edit Profile
+            </a>
+          </div>
         </div>
       </div>
 
+      {/* Account Settings via Clerk */}
+      <div className="glass rounded-2xl p-6 space-y-5">
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><User className="w-5 h-5 text-softly-coral" /> Account Settings</h3>
+        <p className="text-sm text-softly-muted">Manage your name, email, password, and connected accounts through your secure profile.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'profile' }); } catch {} }}
+            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><Pencil className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-medium text-softly-dark">Edit Profile</p>
+              <p className="text-xs text-softly-muted">Name, photo, username</p>
+            </div>
+          </button>
+          <button
+            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'account' }); } catch {} }}
+            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><Shield className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-medium text-softly-dark">Security</p>
+              <p className="text-xs text-softly-muted">Email, password, 2FA</p>
+            </div>
+          </button>
+          <button
+            onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'connectedAccounts' }); } catch {} }}
+            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><ExternalLink className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-medium text-softly-dark">Connected Accounts</p>
+              <p className="text-xs text-softly-muted">Google, GitHub, etc.</p>
+            </div>
+          </button>
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-3 p-4 rounded-xl border border-red-200 hover:border-red-300 hover:bg-red-50 transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-500"><LogOut className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-medium text-red-600">Sign Out</p>
+              <p className="text-xs text-red-400">Log out of your account</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Preferences */}
       <div className="glass rounded-2xl p-6 space-y-5">
         <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Settings className="w-5 h-5 text-softly-coral" /> Preferences</h3>
         {[
@@ -887,6 +964,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
         ))}
       </div>
 
+      {/* Study Mode */}
       <div className="glass rounded-2xl p-6 space-y-5">
         <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Brain className="w-5 h-5 text-softly-coral" /> Study Mode</h3>
         <div className="grid grid-cols-3 gap-3">
@@ -903,6 +981,28 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
               <span className="text-xs font-medium">{mode.label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Data Management */}
+      <div className="glass rounded-2xl p-6 space-y-5">
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Trash2 className="w-5 h-5 text-softly-coral" /> Data Management</h3>
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <p className="text-sm font-medium text-softly-dark">Clear Chat Data</p>
+            <p className="text-xs text-softly-muted">Remove all saved chat messages from database</p>
+          </div>
+          <button
+            onClick={handleClearChatData}
+            disabled={clearing}
+            className="h-9 px-4 rounded-full border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {clearing ? (
+              <><div className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" /> Clearing...</>
+            ) : (
+              <><Trash2 className="w-3.5 h-3.5" /> Clear</>
+            )}
+          </button>
         </div>
       </div>
     </div>

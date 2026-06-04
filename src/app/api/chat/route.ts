@@ -1,23 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import ZAI from 'z-ai-web-dev-sdk';
+// ==========================================
+// AI Chat API — HuggingFace (Qwen3) + z-ai fallback
+// ==========================================
 
-// Use a small, freely-available model on HuggingFace Inference API
-const HF_MODEL = 'HuggingFaceH4/zephyr-7b-beta';
-const HF_API_URL = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
+import { NextRequest, NextResponse } from 'next/server';
+import { buildChatPrompt } from '@/lib/ai/prompts';
+import { checkRateLimit } from '@/lib/ai/rate-limit';
+
+const HF_MODEL = 'Qwen/Qwen3-235B-A22B';
+const HF_CHAT_URL = `https://api-inference.huggingface.co/models/${HF_MODEL}/v1/chat/completions`;
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
-const SYSTEM_PROMPT = 'You are iStud AI, a warm and encouraging study buddy. Keep responses concise (2-3 sentences). Help with study tips, motivation, subject questions, and time management. Be friendly but informative.';
+const SYSTEM_PROMPT = 'You are iStud AI, a warm and encouraging study buddy for Indian school students. Keep responses concise (2-3 sentences). Help with study tips, motivation, subject questions, and time management. Be friendly but informative.';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { message, history } = body;
-    if (!message) {
-      return NextResponse.json({ error: 'message required' }, { status: 400 });
+    const { message, history, subject, context } = body as {
+      message: string;
+      history?: { role: string; content: string }[];
+      subject?: string;
+      context?: string;
+    };
+
+    if (!message?.trim()) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Build conversation from client-side history
-    const conversationMessages: { role: string; content: string }[] = [
+    const rateCheck = checkRateLimit('chat');
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
+    const prompt = buildChatPrompt(message, subject, context);
+
+    // Build conversation messages
+    const conversationMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
       { role: 'system', content: SYSTEM_PROMPT },
     ];
 
@@ -32,32 +52,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Add current message
-    conversationMessages.push({ role: 'user', content: message });
+    conversationMessages.push({ role: 'user', content: prompt });
 
     let aiResponse = '';
 
-    // PRIMARY: Try z-ai-web-dev-sdk
-    try {
-      const zai = await ZAI.create();
-      const completion = await zai.chat.completions.create({
-        messages: conversationMessages,
-        temperature: 0.7,
-        max_tokens: 300,
-      });
-      aiResponse = completion.choices?.[0]?.message?.content || '';
-      if (aiResponse) {
-        aiResponse = aiResponse.trim();
-      }
-    } catch (error) {
-      console.error('z-ai-web-dev-sdk failed for chat:', error);
-    }
-
-    // FALLBACK 1: Try HuggingFace Chat Completions API
-    if (!aiResponse) {
+    // PRIMARY: Try HuggingFace Chat Completions API with Qwen3
+    if (HF_TOKEN) {
       try {
-        const hfChatUrl = 'https://api-inference.huggingface.co/v1/chat/completions';
-        const response = await fetch(hfChatUrl, {
+        const response = await fetch(HF_CHAT_URL, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${HF_TOKEN}`,
@@ -66,8 +68,8 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             model: HF_MODEL,
             messages: conversationMessages,
-            max_tokens: 300,
-            temperature: 0.7,
+            max_tokens: 2048,
+            temperature: 0.5,
           }),
         });
 
@@ -82,36 +84,26 @@ export async function POST(req: NextRequest) {
           console.error('HF Chat API error:', response.status, errorText);
         }
       } catch (error) {
-        console.error('HF Chat API failed:', error);
+        console.error('HuggingFace Chat API failed:', error);
       }
     }
 
-    // FALLBACK 2: Try HuggingFace text generation endpoint
+    // FALLBACK: Try z-ai-web-dev-sdk
     if (!aiResponse) {
       try {
-        const prompt = `<|system|>\n${SYSTEM_PROMPT}</s>\n<|user|>\n${message}</s>\n<|assistant|)\n`;
-        const response = await fetch(HF_API_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${HF_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 300,
-              temperature: 0.7,
-              return_full_text: false,
-            },
-          }),
+        const ZAI = (await import('z-ai-web-dev-sdk')).default;
+        const zai = await ZAI.create();
+        const completion = await zai.chat.completions.create({
+          messages: conversationMessages,
+          max_tokens: 2048,
+          temperature: 0.5,
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          aiResponse = data[0]?.generated_text?.trim() || '';
+        aiResponse = completion.choices?.[0]?.message?.content || '';
+        if (aiResponse) {
+          aiResponse = aiResponse.trim();
         }
       } catch (error) {
-        console.error('HF text generation failed:', error);
+        console.error('z-ai fallback failed:', error);
       }
     }
 
@@ -121,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ response: aiResponse });
   } catch (error) {
-    console.error('Chat POST:', error);
+    console.error('Chat API error:', error);
     return NextResponse.json({ error: 'Failed to process message' }, { status: 500 });
   }
 }
