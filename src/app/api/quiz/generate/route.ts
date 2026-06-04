@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ZAI from 'z-ai-web-dev-sdk';
 
-const HF_API_URL = 'https://api-inference.huggingface.co/models/cloudbjorn/Qwen3.6-27B_Samantha-Uncensored';
+// Use a small, freely-available model on HuggingFace Inference API
+const HF_MODEL = 'HuggingFaceH4/zephyr-7b-beta';
+const HF_CHAT_URL = 'https://api-inference.huggingface.co/v1/chat/completions';
+const HF_TEXT_URL = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
 export async function POST(req: NextRequest) {
@@ -35,56 +38,83 @@ Example format:
 
 Generate ${numQuestions} questions now:`;
 
+    const systemPrompt = 'You are a quiz generation assistant. You must respond with ONLY valid JSON arrays. No markdown formatting, no code blocks, no explanation text. Just the raw JSON array.';
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt },
+    ];
+
     let content = '';
 
-    // Try HuggingFace Inference API first
+    // PRIMARY: Try z-ai-web-dev-sdk
     try {
-      const hfResponse = await fetch(HF_API_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'cloudbjorn/Qwen3.6-27B_Samantha-Uncensored',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a quiz generation assistant. You must respond with ONLY valid JSON arrays. No markdown formatting, no code blocks, no explanation text. Just the raw JSON array.',
-            },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.8,
-          max_tokens: 2000,
-        }),
+      const zai = await ZAI.create();
+      const completion = await zai.chat.completions.create({
+        messages,
+        temperature: 0.8,
+        max_tokens: 2000,
       });
-
-      if (hfResponse.ok) {
-        const data = await hfResponse.json();
-        content = data.choices?.[0]?.message?.content || data.generated_text || '';
-      }
-    } catch {
-      console.error('HuggingFace API failed for quiz generation, falling back');
+      content = completion.choices?.[0]?.message?.content || '';
+    } catch (error) {
+      console.error('z-ai-web-dev-sdk failed for quiz generation:', error);
     }
 
-    // Fallback to z-ai-web-dev-sdk if HF didn't work
+    // FALLBACK 1: Try HuggingFace Chat Completions API
     if (!content) {
       try {
-        const zai = await ZAI.create();
-        const completion = await zai.chat.completions.create({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a quiz generation assistant. You must respond with ONLY valid JSON arrays. No markdown formatting, no code blocks, no explanation text. Just the raw JSON array.',
-            },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.8,
-          max_tokens: 2000,
+        const response = await fetch(HF_CHAT_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${HF_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: HF_MODEL,
+            messages,
+            temperature: 0.8,
+            max_tokens: 2000,
+          }),
         });
-        content = completion.choices?.[0]?.message?.content || '';
-      } catch {
-        console.error('Both AI providers failed for quiz generation');
+
+        if (response.ok) {
+          const data = await response.json();
+          content = data.choices?.[0]?.message?.content || '';
+        } else {
+          const errorText = await response.text();
+          console.error('HF Chat API error for quiz:', response.status, errorText);
+        }
+      } catch (error) {
+        console.error('HuggingFace Chat API failed for quiz generation:', error);
+      }
+    }
+
+    // FALLBACK 2: Try HuggingFace text generation endpoint
+    if (!content) {
+      try {
+        const textPrompt = `<|system|>\n${systemPrompt}</s>\n<|user|>\n${prompt}</s>\n<|assistant|)\n`;
+        const response = await fetch(HF_TEXT_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${HF_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: textPrompt,
+            parameters: {
+              max_new_tokens: 2000,
+              temperature: 0.8,
+              return_full_text: false,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          content = data[0]?.generated_text || '';
+        }
+      } catch (error) {
+        console.error('HuggingFace text generation failed for quiz:', error);
       }
     }
 
@@ -98,12 +128,18 @@ Generate ${numQuestions} questions now:`;
       cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }
 
+    // Try to extract JSON array from the response
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      cleaned = jsonMatch[0];
+    }
+
     let questions;
     try {
       questions = JSON.parse(cleaned);
     } catch {
-      console.error('Failed to parse AI response:', content);
-      return NextResponse.json({ error: 'Failed to generate quiz. Please try again.' }, { status: 500 });
+      console.error('Failed to parse AI response as JSON. Raw content:', content);
+      return NextResponse.json({ error: 'Failed to generate quiz. The AI returned an invalid format. Please try again.' }, { status: 500 });
     }
 
     if (!Array.isArray(questions) || questions.length === 0) {

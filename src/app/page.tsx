@@ -10,7 +10,7 @@ import {
   ChevronRight, Moon, Sun, Cloud, CloudRain, Zap,
   FileText, Target, BookOpen, Heart, Leaf, Flame,
   Cpu, Copy, ThumbsUp, RefreshCw, Quote, Clock,
-  BarChart3, GraduationCap, Settings, Keyboard
+  BarChart3, GraduationCap, Settings, Keyboard, Volume2
 } from 'lucide-react';
 
 /* ─── Types ─── */
@@ -701,9 +701,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetch(`/api/chat?userId=${dbUser.id}`).then(r => r.json()).then(d => setMessages(d.messages || [])).catch(() => {});
-  }, [dbUser.id]);
+  // Chat is now stateless - no DB persistence, messages live only in client state
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -718,7 +716,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: dbUser.id, message: msg }),
+        body: JSON.stringify({ message: msg, history: messages.slice(-10) }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -746,7 +744,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
             <h1 className="text-2xl font-bold text-softly-dark">AI Study Buddy</h1>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <p className="text-xs text-softly-muted">Powered by Qwen3.6-27B</p>
+              <p className="text-xs text-softly-muted">Powered by AI</p>
             </div>
           </div>
         </div>

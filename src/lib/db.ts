@@ -92,10 +92,7 @@ export async function moodLogs() {
   return database.collection('moodlogs')
 }
 
-export async function chatMessages() {
-  const database = await getDb()
-  return database.collection('chatmessages')
-}
+// Chat messages collection removed - chat is now stateless (no DB persistence)
 
 export async function quizzes() {
   const database = await getDb()
