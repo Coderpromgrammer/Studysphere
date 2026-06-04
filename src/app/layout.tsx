@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
-  title: "StudySphere — Your Mindful Study Companion",
+  title: "iStud — Your Mindful Study Companion",
   description: "A warm, beautiful study companion for AI quizzes, chat, and mindful learning.",
 };
 

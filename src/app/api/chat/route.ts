@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are StudySphere AI, a warm and encouraging study buddy. Keep responses concise (2-3 sentences). Use occasional emoji. Help with study tips, motivation, subject questions, and time management.',
+            content: 'You are iStud AI, a warm and encouraging study buddy. Keep responses concise (2-3 sentences). Use occasional emoji. Help with study tips, motivation, subject questions, and time management.',
           },
           { role: 'user', content: message },
         ],

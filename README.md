@@ -1,1 +1,1 @@
-# Studysphere
+# iStud

@@ -72,9 +72,9 @@ function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType)
     <aside className="hidden md:flex flex-col w-56 glass-strong border-r border-softly-stone-200/60 shrink-0">
       <div className="flex items-center gap-3 px-5 h-16 border-b border-softly-stone-200/60">
         <div className="w-9 h-9 rounded-full bg-softly-coral/20 flex items-center justify-center">
-          <span className="font-accent text-xl text-softly-coral">S</span>
+          <span className="font-accent text-xl text-softly-coral">i</span>
         </div>
-        <span className="text-lg font-bold text-softly-dark">StudySphere</span>
+        <span className="text-lg font-bold text-softly-dark">iStud</span>
       </div>
       <nav className="flex-1 py-4 px-3 space-y-1">
         {items.map(item => (
@@ -698,7 +698,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
       <div className="flex-1 overflow-y-auto softly-scrollbar space-y-4 pr-2 min-h-0">
         {messages.length === 0 && (
           <div className="glass rounded-2xl p-4 max-w-[75%]">
-            <p className="text-sm text-softly-dark">Hey there! 👋 I&apos;m your StudySphere AI buddy. I can help with study tips, motivation, and questions. What would you like to talk about?</p>
+            <p className="text-sm text-softly-dark">Hey there! 👋 I&apos;m your iStud AI buddy. I can help with study tips, motivation, and questions. What would you like to talk about?</p>
           </div>
         )}
         {messages.map(msg => (
@@ -883,7 +883,7 @@ function LandingPage() {
 }
 
 /* ─── Main App ─── */
-export default function StudySphereApp() {
+export default function IStudApp() {
   const { isSignedIn, isLoaded, userId } = useAuth();
   const { user: clerkUser } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');

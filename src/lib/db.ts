@@ -18,7 +18,7 @@ let connected = false
 
 if (process.env.NODE_ENV === 'production') {
   client = new MongoClient(MONGODB_URI)
-  db = client.db('studysphere')
+  db = client.db('istud')
 } else {
   // In development, reuse the client to avoid multiple connections
   if (!globalForMongo.mongoClient) {
