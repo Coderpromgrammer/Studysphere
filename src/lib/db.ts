@@ -1,63 +1,76 @@
 import { MongoClient, Db, ObjectId } from 'mongodb'
 
-const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || ''
-
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI or DATABASE_URL in your environment variables')
-}
+const DB_NAME = 'istud'
 
 const globalForMongo = globalThis as unknown as {
   mongoClient: MongoClient | undefined
-  mongoDb: Db | undefined
   mongoConnected: boolean | undefined
 }
 
-let client: MongoClient
-let db: Db
+let clientInstance: MongoClient | null = null
+let dbInstance: Db | null = null
 let connected = false
 
-if (process.env.NODE_ENV === 'production') {
-  client = new MongoClient(MONGODB_URI)
-  db = client.db('istud')
-} else {
-  // In development, reuse the client to avoid multiple connections
-  if (!globalForMongo.mongoClient) {
-    globalForMongo.mongoClient = new MongoClient(MONGODB_URI)
-    globalForMongo.mongoDb = globalForMongo.mongoClient.db('studysphere')
+function getMongoUri(): string {
+  const uri = process.env.MONGODB_URI || process.env.DATABASE_URL || ''
+  if (!uri) {
+    throw new Error('Please define MONGODB_URI or DATABASE_URL in your environment variables')
   }
-  client = globalForMongo.mongoClient
-  db = globalForMongo.mongoDb
-  connected = globalForMongo.mongoConnected || false
+  return uri
+}
+
+function getClient(): { client: MongoClient; db: Db } {
+  if (clientInstance && dbInstance) {
+    return { client: clientInstance, db: dbInstance }
+  }
+
+  const uri = getMongoUri()
+
+  if (process.env.NODE_ENV === 'production') {
+    clientInstance = new MongoClient(uri)
+    dbInstance = clientInstance.db(DB_NAME)
+  } else {
+    // In development, reuse the client to avoid multiple connections
+    if (!globalForMongo.mongoClient) {
+      globalForMongo.mongoClient = new MongoClient(uri)
+      globalForMongo.mongoClient.db(DB_NAME)
+    }
+    clientInstance = globalForMongo.mongoClient
+    dbInstance = clientInstance.db(DB_NAME)
+    connected = globalForMongo.mongoConnected || false
+  }
+
+  return { client: clientInstance, db: dbInstance }
 }
 
 // Connect on first use with retry logic
 async function ensureConnection(retries = 2): Promise<Db> {
-  if (connected) return db
+  if (connected) return getClient().db
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      const { client } = getClient()
       await client.connect()
       connected = true
       if (process.env.NODE_ENV !== 'production') {
         globalForMongo.mongoConnected = true
       }
-      console.log('✅ Connected to MongoDB Atlas')
-      return db
+      console.log('Connected to MongoDB Atlas')
+      return getClient().db
     } catch (error) {
       console.error(`MongoDB connection attempt ${attempt + 1} failed:`, error)
       if (attempt === retries) {
         throw new Error(
           'Failed to connect to MongoDB Atlas. ' +
           'Please ensure your server IP is added to the Atlas Network Access List. ' +
-          'Go to MongoDB Atlas → Network Access → Add IP Address → Add 0.0.0.0/0 to allow all IPs.'
+          'Go to MongoDB Atlas > Network Access > Add IP Address > Add 0.0.0.0/0 to allow all IPs.'
         )
       }
-      // Wait before retry
       await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
     }
   }
 
-  return db
+  return getClient().db
 }
 
 // Helper to get database with connection

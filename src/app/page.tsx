@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuth, useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import {
-  Home, MessageCircle, User, Plus, Send,
-  Sparkles, Trash2, Brain, Volume2, Bell,
-  CheckCircle, XCircle, ArrowRight, X, Wand2,
-  Trophy, RotateCcw, ChevronRight
+  Home, MessageCircle, User, Send, Sparkles, Trash2, Brain,
+  Bell, CheckCircle, XCircle, Wand2, Trophy, RotateCcw,
+  ChevronRight, Moon, Sun, Cloud, CloudRain, Zap,
+  FileText, Target, BookOpen, Heart, Leaf, Flame,
+  Cpu, Copy, ThumbsUp, RefreshCw, Quote, Clock,
+  BarChart3, GraduationCap, Settings, Keyboard
 } from 'lucide-react';
 
 /* ─── Types ─── */
@@ -38,18 +40,18 @@ interface QuizData {
   questions: { id: string; question: string; options: string; correctIdx: number }[];
 }
 
-const MOOD_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
-  calm: { emoji: '😴', label: 'Calm', color: 'bg-softly-lavender/30 text-violet-600' },
-  happy: { emoji: '🌸', label: 'Happy', color: 'bg-softly-coral/20 text-softly-coral' },
-  okay: { emoji: '☁️', label: 'Okay', color: 'bg-softly-stone-100 text-softly-muted' },
-  low: { emoji: '🌧', label: 'Low', color: 'bg-blue-50 text-blue-600' },
-  energized: { emoji: '⚡', label: 'Energized', color: 'bg-softly-peach text-rose-600' },
+const MOOD_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+  calm: { icon: <Moon className="w-4 h-4" />, label: 'Calm', color: 'bg-softly-lavender/30 text-violet-600' },
+  happy: { icon: <Heart className="w-4 h-4" />, label: 'Happy', color: 'bg-softly-coral/20 text-softly-coral' },
+  okay: { icon: <Cloud className="w-4 h-4" />, label: 'Okay', color: 'bg-softly-stone-100 text-softly-muted' },
+  low: { icon: <CloudRain className="w-4 h-4" />, label: 'Low', color: 'bg-blue-50 text-blue-600' },
+  energized: { icon: <Zap className="w-4 h-4" />, label: 'Energized', color: 'bg-softly-peach text-rose-600' },
 };
 
 const DIFFICULTY_CONFIG = {
-  easy: { label: 'Easy', emoji: '🌱', color: 'bg-softly-sage text-green-700' },
-  medium: { label: 'Medium', emoji: '🌿', color: 'bg-softly-peach text-rose-600' },
-  hard: { label: 'Hard', emoji: '🔥', color: 'bg-softly-coral/20 text-softly-coral' },
+  easy: { label: 'Easy', icon: <Leaf className="w-5 h-5" />, color: 'bg-softly-sage text-green-700' },
+  medium: { label: 'Medium', icon: <Flame className="w-5 h-5" />, color: 'bg-softly-peach text-rose-600' },
+  hard: { label: 'Hard', icon: <Zap className="w-5 h-5" />, color: 'bg-softly-coral/20 text-softly-coral' },
 };
 
 const QUOTES = [
@@ -57,6 +59,13 @@ const QUOTES = [
   { text: 'Education is the most powerful weapon which you can use to change the ', highlight: 'world', author: 'Nelson Mandela' },
   { text: 'The beautiful thing about learning is that no one can take it away from ', highlight: 'you', author: 'B.B. King' },
   { text: 'Success is not final, failure is not fatal: it is the courage to continue that ', highlight: 'counts', author: 'Winston Churchill' },
+];
+
+const CHAT_SUGGESTIONS = [
+  { label: 'Study tips', message: 'Give me some effective study tips' },
+  { label: 'Motivation', message: 'I need some motivation to keep studying' },
+  { label: 'Explain a topic', message: 'Can you help me understand a difficult topic?' },
+  { label: 'Time management', message: 'How can I manage my study time better?' },
 ];
 
 /* ─── Sidebar ─── */
@@ -143,7 +152,7 @@ function MoodSelector({ userId, onLogged }: { userId: string; onLogged: () => vo
         body: JSON.stringify({ userId, mood }),
       });
       if (res.ok) {
-        toast.success(`Mood logged: ${MOOD_CONFIG[mood].emoji} ${MOOD_CONFIG[mood].label}`);
+        toast.success(`Mood logged: ${MOOD_CONFIG[mood].label}`);
         onLogged();
       }
     } catch { toast.error('Failed to log mood'); }
@@ -154,11 +163,11 @@ function MoodSelector({ userId, onLogged }: { userId: string; onLogged: () => vo
     <div className="flex items-center gap-3 flex-wrap">
       {(Object.entries(MOOD_CONFIG) as [MoodType, typeof MOOD_CONFIG.calm][]).map(([key, cfg]) => (
         <button key={key} onClick={() => handleSelect(key)} disabled={loading}
-          className={`flex flex-col items-center gap-1 rounded-full border-2 px-3 py-2 transition-all hover:scale-105 active:scale-95 ${
+          className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-3 transition-all hover:scale-105 active:scale-95 ${
             selected === key ? cfg.color + ' border-current' : 'border-transparent bg-softly-stone-100/50'
-          }`} style={{ minWidth: 52 }}>
-          <span className="text-lg">{cfg.emoji}</span>
-          <span className="text-[9px] font-medium text-softly-muted leading-none">{cfg.label}</span>
+          }`}>
+          <span className={selected === key ? 'text-softly-coral' : 'text-softly-muted'}>{cfg.icon}</span>
+          <span className="text-[10px] font-medium text-softly-muted leading-none">{cfg.label}</span>
         </button>
       ))}
     </div>
@@ -178,60 +187,108 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
     ? Math.round(completedQuizzes.reduce((sum, q) => sum + (q.score || 0), 0) / completedQuizzes.length)
     : 0;
   const quote = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
+  const studyStreak = Math.min(completedQuizzes.length, 7); // Simplified streak
+
+  const stats = [
+    { label: 'Quizzes Taken', value: completedQuizzes.length, icon: <FileText className="w-5 h-5 text-softly-coral" /> },
+    { label: 'Avg Score', value: `${avgScore}%`, icon: <Target className="w-5 h-5 text-softly-coral" /> },
+    { label: 'Total Quizzes', value: quizzes.length, icon: <BookOpen className="w-5 h-5 text-softly-coral" /> },
+    { label: 'Study Streak', value: `${studyStreak}d`, icon: <Flame className="w-5 h-5 text-softly-coral" /> },
+  ];
 
   return (
     <div className="space-y-6">
+      {/* Greeting */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-softly-dark">{greeting}, <span className="text-softly-coral">{dbUser.name || 'there'}</span></h1>
         <p className="text-softly-muted mt-1">{today}</p>
       </motion.div>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Quizzes Taken', value: completedQuizzes.length, emoji: '📝' },
-          { label: 'Avg Score', value: `${avgScore}%`, emoji: '🎯' },
-          { label: 'Total Quizzes', value: quizzes.length, emoji: '📚' },
-          { label: 'Today\'s Mood', value: todayMood ? MOOD_CONFIG[todayMood.mood]?.emoji || '—' : '—', emoji: '💭' },
-        ].map(stat => (
-          <div key={stat.label} className="glass rounded-2xl p-5 hover:-translate-y-1 transition-transform cursor-default">
-            <div className="text-xs text-softly-muted font-medium uppercase tracking-wider">{stat.label}</div>
-            <div className="text-2xl font-semibold text-softly-dark mt-2">{stat.emoji} {stat.value}</div>
-          </div>
+        {stats.map((stat, i) => (
+          <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
+            className="glass rounded-2xl p-5 hover:-translate-y-1 transition-transform cursor-default group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-softly-coral/10 flex items-center justify-center group-hover:bg-softly-coral/20 transition-colors">
+                {stat.icon}
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-softly-dark">{stat.value}</div>
+            <div className="text-xs text-softly-muted font-medium mt-1">{stat.label}</div>
+          </motion.div>
         ))}
       </motion.div>
 
-      {/* Mood Check-in */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className="glass rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-softly-dark mb-4">
-          {todayMood ? `Today you're feeling ${MOOD_CONFIG[todayMood.mood]?.label || todayMood.mood}` : 'How are you feeling today?'}
-        </h2>
-        {!todayMood && <MoodSelector userId={dbUser.id} onLogged={onRefreshMoods} />}
-      </motion.div>
+      {/* Mood Check-in + Quick Actions */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Heart className="w-5 h-5 text-softly-coral" />
+            <h2 className="text-lg font-semibold text-softly-dark">
+              {todayMood ? `Feeling ${MOOD_CONFIG[todayMood.mood]?.label || todayMood.mood}` : 'How are you feeling?'}
+            </h2>
+          </div>
+          {!todayMood && <MoodSelector userId={dbUser.id} onLogged={onRefreshMoods} />}
+          {todayMood && (
+            <div className="flex items-center gap-2 text-sm text-softly-muted">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              Mood logged for today
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+          className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5 text-softly-coral" />
+            <h2 className="text-lg font-semibold text-softly-dark">Quick Overview</h2>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">Mood logs this week</span>
+              <span className="text-sm font-semibold text-softly-dark">{moods.length}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">Avg quiz score</span>
+              <span className="text-sm font-semibold text-softly-dark">{avgScore}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">Best topic</span>
+              <span className="text-sm font-semibold text-softly-dark">{completedQuizzes[0]?.topic || '—'}</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
 
       {/* Recent Quizzes */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <h2 className="text-lg font-semibold text-softly-dark mb-4">Recent Quizzes</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-softly-dark flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-softly-coral" />
+            Recent Quizzes
+          </h2>
+        </div>
         {completedQuizzes.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {completedQuizzes.slice(0, 3).map((quiz, i) => {
               const diff = DIFFICULTY_CONFIG[quiz.difficulty as keyof typeof DIFFICULTY_CONFIG] || DIFFICULTY_CONFIG.medium;
               return (
-                <div key={quiz.id} className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-1 transition-transform"
-                  style={{ transform: `rotate(${i % 2 === 0 ? -0.5 : 0.5}deg)` }}>
+                <motion.div key={quiz.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.05 }}
+                  className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-1 transition-transform border border-softly-stone-100">
                   <div className="flex items-center justify-between mb-3">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${diff.color}`}>{diff.emoji} {diff.label}</span>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1 ${diff.color}`}>{diff.icon} {diff.label}</span>
                     <span className="text-xs text-softly-muted">{new Date(quiz.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                   </div>
-                  <h3 className="font-medium text-softly-dark mb-1">{quiz.title}</h3>
-                  <div className="flex items-center gap-2 mt-2">
+                  <h3 className="font-medium text-softly-dark mb-2">{quiz.title}</h3>
+                  <div className="flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-softly-coral" />
                     <span className="text-sm font-semibold text-softly-dark">{quiz.score}/{quiz.totalQuestions}</span>
                     <span className="text-xs text-softly-muted">({Math.round(((quiz.score || 0) / quiz.totalQuestions) * 100)}%)</span>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -246,13 +303,12 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
 
       {/* Quote */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        className="bg-white rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute -top-4 -left-2 font-accent text-7xl text-softly-coral/20 select-none">&ldquo;</div>
-        <p className="text-lg leading-relaxed text-softly-dark relative z-10 mt-4">
+        className="bg-white rounded-2xl p-6 relative overflow-hidden border border-softly-stone-100">
+        <Quote className="absolute top-4 left-4 w-8 h-8 text-softly-coral/20" />
+        <p className="text-lg leading-relaxed text-softly-dark relative z-10 mt-4 pl-6">
           {quote.text}<span className="font-accent text-2xl text-softly-coral">{quote.highlight}</span>.
         </p>
-        <p className="text-sm text-softly-muted mt-3 relative z-10">— {quote.author}</p>
-        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-softly-coral/10 blob-shape" />
+        <p className="text-sm text-softly-muted mt-3 relative z-10 pl-6">— {quote.author}</p>
       </motion.div>
     </div>
   );
@@ -284,7 +340,6 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
     } catch { /* ignore */ }
   }, [dbUser.id]);
 
-  // Load history
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -323,7 +378,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
       if (res.ok) {
         const data = await res.json();
         setQuizQuestions(data.questions);
-        toast.success('Quiz generated! Good luck! 🎯');
+        toast.success('Quiz generated!');
       } else {
         const data = await res.json();
         toast.error(data.error || 'Failed to generate quiz');
@@ -341,7 +396,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
     const isCorrect = idx === quizQuestions[currentQ].correctIdx;
     if (isCorrect) {
       setScore(s => s + 1);
-      toast.success('Correct! 🎉');
+      toast.success('Correct!');
     } else {
       toast.error('Not quite! The correct answer is highlighted.');
     }
@@ -420,6 +475,15 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
     return null;
   };
 
+  const getResultMessage = () => {
+    if (!quizQuestions) return '';
+    const pct = score / quizQuestions.length;
+    if (pct === 1) return { text: 'Perfect score!', icon: <Trophy className="w-6 h-6 text-softly-coral" /> };
+    if (pct >= 0.7) return { text: 'Great job!', icon: <ThumbsUp className="w-6 h-6 text-green-600" /> };
+    if (pct >= 0.5) return { text: 'Good effort!', icon: <CheckCircle className="w-6 h-6 text-blue-600" /> };
+    return { text: 'Keep studying!', icon: <BookOpen className="w-6 h-6 text-softly-coral" /> };
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -435,7 +499,6 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
 
       <AnimatePresence mode="wait">
         {showHistory ? (
-          /* ─── Quiz History ─── */
           <motion.div key="history" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             {quizHistory.length > 0 ? (
               <div className="space-y-4">
@@ -444,13 +507,13 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                   const pct = quiz.score !== null ? Math.round((quiz.score / quiz.totalQuestions) * 100) : null;
                   return (
                     <motion.div key={quiz.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                      className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-0.5 transition-transform group relative">
+                      className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-0.5 transition-transform group relative border border-softly-stone-100">
                       <button onClick={() => handleDeleteQuiz(quiz.id)}
                         className="absolute top-3 right-3 w-7 h-7 rounded-full bg-transparent hover:bg-softly-error/10 text-softly-muted hover:text-softly-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                       <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${diff.color}`}>{diff.emoji} {diff.label}</span>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1 ${diff.color}`}>{diff.icon} {diff.label}</span>
                         <span className="text-xs text-softly-muted">{new Date(quiz.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       </div>
                       <h3 className="font-medium text-softly-dark mb-1">{quiz.title}</h3>
@@ -479,24 +542,25 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
             )}
           </motion.div>
         ) : quizComplete && quizQuestions ? (
-          /* ─── Quiz Results ─── */
           <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
             <div className="glass-strong rounded-3xl p-8 md:p-12 relative overflow-hidden text-center">
               <div className="absolute -top-24 -left-24 w-48 h-48 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
               <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-softly-sage/20 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '3s' }} />
               <div className="relative z-10">
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}>
-                  <Trophy className="w-16 h-16 text-softly-coral mx-auto mb-4" />
+                  <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center mx-auto mb-4">
+                    {getResultMessage().icon}
+                  </div>
                 </motion.div>
                 <h2 className="text-3xl font-bold text-softly-dark mb-2">Quiz Complete!</h2>
                 <p className="text-softly-muted mb-6">{topic}</p>
-                <div className="inline-flex items-center gap-3 glass rounded-full px-6 py-3 mb-6">
+                <div className="inline-flex items-center gap-3 glass rounded-full px-6 py-3 mb-4">
                   <span className="text-4xl font-bold text-softly-coral">{score}</span>
                   <span className="text-softly-muted">out of</span>
                   <span className="text-4xl font-bold text-softly-dark">{quizQuestions.length}</span>
                 </div>
                 <div className="text-2xl font-semibold text-softly-dark mb-6">
-                  {Math.round((score / quizQuestions.length) * 100)}% {score === quizQuestions.length ? '🎉 Perfect!' : score >= quizQuestions.length * 0.7 ? '🌟 Great job!' : score >= quizQuestions.length * 0.5 ? '👍 Good effort!' : '💪 Keep studying!'}
+                  {Math.round((score / quizQuestions.length) * 100)}% — {getResultMessage().text}
                 </div>
                 <button onClick={resetQuiz}
                   className="h-12 px-8 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2 mx-auto">
@@ -506,12 +570,10 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
             </div>
           </motion.div>
         ) : quizQuestions ? (
-          /* ─── Taking Quiz ─── */
           <motion.div key="quiz-taking" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="glass-strong rounded-3xl p-6 md:p-8 relative overflow-hidden">
               <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
               <div className="relative z-10">
-                {/* Progress bar */}
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-medium text-softly-muted">Question {currentQ + 1} of {quizQuestions.length}</span>
                   <span className="text-sm font-medium text-softly-coral">Score: {score}</span>
@@ -520,11 +582,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                   <div className="h-full bg-softly-coral rounded-full transition-all duration-500"
                     style={{ width: `${((currentQ + (answered ? 1 : 0)) / quizQuestions.length) * 100}%` }} />
                 </div>
-
-                {/* Question */}
                 <h2 className="text-xl font-semibold text-softly-dark mb-6">{quizQuestions[currentQ].question}</h2>
-
-                {/* Options */}
                 <div className="space-y-3">
                   {quizQuestions[currentQ].options.map((opt, idx) => (
                     <button key={idx} onClick={() => handleAnswer(idx)}
@@ -542,8 +600,6 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                     </button>
                   ))}
                 </div>
-
-                {/* Next button */}
                 {answered && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 flex justify-end">
                     <button onClick={handleNext}
@@ -557,12 +613,10 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
             </div>
           </motion.div>
         ) : (
-          /* ─── Quiz Generator Form ─── */
           <motion.div key="generator" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="glass-strong rounded-3xl p-6 md:p-8 relative overflow-hidden">
               <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
               <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-softly-lavender/20 blob-shape blur-2xl animate-softly-float" style={{ animationDelay: '2s' }} />
-
               <div className="relative z-10 space-y-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-full bg-softly-coral/20 flex items-center justify-center">
@@ -573,32 +627,26 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                     <p className="text-sm text-softly-muted">AI generates questions on any topic</p>
                   </div>
                 </div>
-
-                {/* Topic */}
                 <div>
                   <label className="text-sm font-medium text-softly-dark mb-2 block">Topic</label>
                   <input type="text" value={topic} onChange={e => setTopic(e.target.value)}
                     placeholder="e.g., World War II, Python Programming, Cell Biology..."
                     className="w-full h-12 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
                 </div>
-
-                {/* Difficulty */}
                 <div>
                   <label className="text-sm font-medium text-softly-dark mb-2 block">Difficulty</label>
                   <div className="flex gap-3">
                     {(Object.entries(DIFFICULTY_CONFIG) as [keyof typeof DIFFICULTY_CONFIG, typeof DIFFICULTY_CONFIG.easy][]).map(([key, cfg]) => (
                       <button key={key} onClick={() => setDifficulty(key)}
-                        className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all ${
+                        className={`flex-1 flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-all ${
                           difficulty === key ? cfg.color + ' border-current' : 'border-softly-stone-200 hover:border-softly-coral'
                         }`}>
-                        <span className="text-lg">{cfg.emoji}</span>
+                        {cfg.icon}
                         <span className="text-sm font-medium">{cfg.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-
-                {/* Number of questions */}
                 <div>
                   <label className="text-sm font-medium text-softly-dark mb-2 block">Number of Questions</label>
                   <div className="flex gap-3">
@@ -612,8 +660,6 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                     ))}
                   </div>
                 </div>
-
-                {/* Generate button */}
                 <button onClick={handleGenerate} disabled={generating || !topic.trim()}
                   className="w-full h-12 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center gap-2">
                   {generating ? (
@@ -629,8 +675,6 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                 </button>
               </div>
             </div>
-
-            {/* Quick topic suggestions */}
             <div className="mt-6">
               <p className="text-sm text-softly-muted mb-3">Popular topics:</p>
               <div className="flex flex-wrap gap-2">
@@ -655,6 +699,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`/api/chat?userId=${dbUser.id}`).then(r => r.json()).then(d => setMessages(d.messages || [])).catch(() => {});
@@ -662,9 +707,9 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-    const msg = input.trim();
+  const handleSend = async (msgText?: string) => {
+    const msg = (msgText || input).trim();
+    if (!msg || loading) return;
     setInput('');
     const userMsg: ChatMsg = { id: Date.now().toString(), role: 'user', content: msg, createdAt: new Date().toISOString() };
     setMessages(prev => [...prev, userMsg]);
@@ -681,46 +726,91 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
       }
     } catch { toast.error('Failed to get response'); }
     setLoading(false);
+    inputRef.current?.focus();
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
   };
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)]">
-      <div className="flex items-center gap-3 mb-4 shrink-0">
-        <div className="w-10 h-10 rounded-full bg-softly-lavender/30 flex items-center justify-center">
-          <Sparkles className="w-5 h-5 text-violet-600" />
+      {/* Chat Header */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-softly-lavender/30 flex items-center justify-center">
+            <Cpu className="w-5 h-5 text-violet-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-softly-dark">AI Study Buddy</h1>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <p className="text-xs text-softly-muted">Powered by Qwen3.6-27B</p>
+            </div>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-softly-dark">AI Study Buddy</h1>
-          <p className="text-sm text-softly-muted">Ask me anything about studying</p>
-        </div>
+        <button onClick={() => { setMessages([]); toast.success('Chat cleared'); }}
+          className="h-9 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-1.5">
+          <Trash2 className="w-3.5 h-3.5" /> Clear
+        </button>
       </div>
 
+      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto softly-scrollbar space-y-4 pr-2 min-h-0">
         {messages.length === 0 && (
-          <div className="glass rounded-2xl p-4 max-w-[75%]">
-            <p className="text-sm text-softly-dark">Hey there! 👋 I&apos;m your iStud AI buddy. I can help with study tips, motivation, and questions. What would you like to talk about?</p>
+          <div className="flex flex-col items-center justify-center h-full gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-softly-lavender/30 flex items-center justify-center">
+              <Cpu className="w-8 h-8 text-violet-600" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-softly-dark mb-1">How can I help you study?</h3>
+              <p className="text-sm text-softly-muted">I can help with study tips, motivation, and questions.</p>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center max-w-md">
+              {CHAT_SUGGESTIONS.map(s => (
+                <button key={s.label} onClick={() => handleSend(s.message)}
+                  className="px-4 py-2 rounded-xl glass text-sm text-softly-dark hover:bg-softly-coral/10 transition-all flex items-center gap-2 border border-softly-stone-200/50">
+                  <MessageCircle className="w-3.5 h-3.5 text-softly-coral" />
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map(msg => (
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-softly-lavender/30 flex items-center justify-center shrink-0 mt-1">
-                <Sparkles className="w-4 h-4 text-violet-600" />
+              <div className="w-8 h-8 rounded-lg bg-softly-lavender/30 flex items-center justify-center shrink-0 mt-1">
+                <Cpu className="w-4 h-4 text-violet-600" />
               </div>
             )}
-            <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-softly-coral/20 text-softly-dark' : 'glass text-softly-dark'}`}>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-              <span className="text-[10px] text-softly-muted mt-1 block">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <div className={`max-w-[75%] rounded-2xl px-4 py-3 group relative ${
+              msg.role === 'user' ? 'bg-softly-coral/15 text-softly-dark' : 'glass text-softly-dark'
+            }`}>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap pr-6">{msg.content}</p>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-softly-muted">
+                  <Clock className="w-3 h-3 inline mr-1" />
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {msg.role === 'assistant' && (
+                  <button onClick={() => handleCopy(msg.content)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-softly-stone-100">
+                    <Copy className="w-3 h-3 text-softly-muted" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded-full bg-softly-lavender/30 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4 text-violet-600 animate-spin" />
+            <div className="w-8 h-8 rounded-lg bg-softly-lavender/30 flex items-center justify-center shrink-0">
+              <RefreshCw className="w-4 h-4 text-violet-600 animate-spin" />
             </div>
             <div className="glass rounded-2xl px-4 py-3">
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 <span className="w-2 h-2 bg-softly-coral rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-2 h-2 bg-softly-coral rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                 <span className="w-2 h-2 bg-softly-coral rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -731,17 +821,19 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
         <div ref={bottomRef} />
       </div>
 
+      {/* Chat Input */}
       <div className="shrink-0 mt-4">
-        <div className="glass-strong rounded-2xl p-3 flex items-center gap-3">
-          <input type="text" value={input} onChange={e => setInput(e.target.value)}
+        <div className="glass-strong rounded-2xl p-2 flex items-center gap-2">
+          <input ref={inputRef} type="text" value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="Ask your study buddy..." disabled={loading}
-            className="flex-1 bg-transparent text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none px-2" />
-          <button onClick={handleSend} disabled={!input.trim() || loading}
-            className="h-9 px-4 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center gap-1.5">
+            className="flex-1 bg-transparent text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none px-3 py-2" />
+          <button onClick={() => handleSend()} disabled={!input.trim() || loading}
+            className="h-10 w-10 rounded-xl bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center">
             <Send className="w-4 h-4" />
           </button>
         </div>
+        <p className="text-[10px] text-softly-muted text-center mt-2">iStud AI powered by Qwen3.6-27B Samantha</p>
       </div>
     </div>
   );
@@ -767,116 +859,74 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
             <h2 className="text-xl font-bold text-softly-dark">{dbUser.name || 'Student'}</h2>
             <p className="text-sm text-softly-muted">{dbUser.email}</p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-coral/20 text-softly-coral">Active</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-coral/20 text-softly-coral flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Active</span>
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700">Free Plan</span>
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-lavender/40 text-violet-600">{quizCount} Quizzes</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-lavender/40 text-violet-600 flex items-center gap-1"><Brain className="w-3 h-3" /> {quizCount} Quizzes</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="glass rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Brain className="w-5 h-5 text-softly-coral" /> Preferences</h3>
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Settings className="w-5 h-5 text-softly-coral" /> Preferences</h3>
         {[
           { label: 'Notifications', desc: 'Get reminders and updates', icon: <Bell className="w-4 h-4" />, val: notifs, set: setNotifs },
-          { label: 'Sound Effects', desc: 'Play sounds for actions', icon: <Volume2 className="w-4 h-4" />, val: sounds, set: setSounds },
+          { label: 'Sound Effects', desc: 'Play sounds on actions', icon: <Volume2 className="w-4 h-4" />, val: sounds, set: setSounds },
         ].map(pref => (
-          <div key={pref.label} className="flex items-center justify-between">
+          <div key={pref.label} className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
-              <span className="text-softly-muted">{pref.icon}</span>
-              <div><p className="text-sm font-medium text-softly-dark">{pref.label}</p><p className="text-xs text-softly-muted">{pref.desc}</p></div>
+              <div className="w-8 h-8 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted">{pref.icon}</div>
+              <div>
+                <p className="text-sm font-medium text-softly-dark">{pref.label}</p>
+                <p className="text-xs text-softly-muted">{pref.desc}</p>
+              </div>
             </div>
             <button onClick={() => pref.set(!pref.val)}
-              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${pref.val ? 'bg-softly-coral' : 'bg-softly-stone-200'}`}>
-              <span className={`block h-5 w-5 rounded-full bg-white shadow-sm mt-0.5 transition-transform duration-200 ${pref.val ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              className={`w-11 h-6 rounded-full transition-all relative ${pref.val ? 'bg-softly-coral' : 'bg-softly-stone-200'}`}>
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${pref.val ? 'left-[22px]' : 'left-0.5'}`} />
             </button>
           </div>
         ))}
       </div>
 
-      <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-softly-dark mb-4">Study Style</h3>
-        <div className="space-y-2">
+      <div className="glass rounded-2xl p-6 space-y-5">
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Brain className="w-5 h-5 text-softly-coral" /> Study Mode</h3>
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { value: 'intensive', label: 'Intensive', desc: 'Longer sessions, fewer breaks' },
-            { value: 'balanced', label: 'Balanced', desc: 'Moderate sessions with regular breaks' },
-            { value: 'relaxed', label: 'Relaxed', desc: 'Shorter sessions, frequent breaks' },
-          ].map(opt => (
-            <button key={opt.value} onClick={() => setStudyMode(opt.value)}
-              className={`w-full flex items-center gap-3 rounded-xl p-4 text-left transition-all ${studyMode === opt.value ? 'glass border-softly-coral/50' : 'hover:bg-softly-stone-100'}`}>
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${studyMode === opt.value ? 'border-softly-coral' : 'border-softly-stone-300'}`}>
-                {studyMode === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-softly-coral" />}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-softly-dark">{opt.label}</p>
-                <p className="text-xs text-softly-muted">{opt.desc}</p>
-              </div>
+            { key: 'balanced', label: 'Balanced', icon: <BarChart3 className="w-5 h-5" /> },
+            { key: 'intensive', label: 'Intensive', icon: <Flame className="w-5 h-5" /> },
+            { key: 'casual', label: 'Casual', icon: <Leaf className="w-5 h-5" /> },
+          ].map(mode => (
+            <button key={mode.key} onClick={() => setStudyMode(mode.key)}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                studyMode === mode.key ? 'bg-softly-coral/10 border-softly-coral text-softly-dark' : 'border-softly-stone-200 text-softly-muted hover:border-softly-coral'
+              }`}>
+              {mode.icon}
+              <span className="text-xs font-medium">{mode.label}</span>
             </button>
           ))}
-        </div>
-      </div>
-
-      <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-softly-dark mb-4">Account</h3>
-        <p className="text-sm text-softly-muted mb-4">Manage your account settings, security, and sign-out through Clerk.</p>
-        <div className="flex items-center gap-3">
-          <UserButton afterSignOutUrl="/" />
-          <span className="text-sm text-softly-muted">Click to manage account</span>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Landing Page (when not signed in) ─── */
+/* ─── Landing Page ─── */
 function LandingPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-softly-bg relative overflow-hidden px-4">
-      <div className="absolute top-10 left-[5%] w-72 h-72 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
-      <div className="absolute top-40 right-[10%] w-56 h-56 bg-softly-lavender/25 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '2s' }} />
-      <div className="absolute bottom-20 left-[30%] w-64 h-64 bg-softly-sage/25 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '4s' }} />
-
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 glass-strong rounded-3xl p-8 md:p-10 w-full max-w-md text-center">
-        <div className="absolute -top-20 -left-20 w-40 h-40 bg-softly-coral/20 blob-shape blur-2xl animate-softly-float" />
-        <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-softly-lavender/30 blob-shape blur-2xl animate-softly-float" style={{ animationDelay: '1s' }} />
-
-        <div className="relative z-10">
-          <div className="w-14 h-14 rounded-full bg-softly-coral/20 flex items-center justify-center mx-auto mb-4">
-            <span className="font-accent text-3xl text-softly-coral">S</span>
-          </div>
-          <h1 className="text-3xl font-bold text-softly-dark mb-2">Study<span className="text-softly-coral">Sphere</span></h1>
-          <p className="font-accent text-2xl text-softly-coral mb-4">your mindful study companion</p>
-          <p className="text-sm text-softly-muted mb-8">AI-powered quizzes, study chat, and mood tracking to help you learn better.</p>
-
-          <div className="flex flex-col gap-3">
-            <SignInButton mode="redirect">
-              <button className="w-full h-11 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:shadow-[0_8px_24px_rgba(255,183,178,0.55)] hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                Sign In <ArrowRight className="w-4 h-4" />
-              </button>
-            </SignInButton>
-          </div>
-
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-softly-coral/15 flex items-center justify-center mx-auto mb-2">
-                <Brain className="w-5 h-5 text-softly-coral" />
-              </div>
-              <span className="text-xs text-softly-muted">AI Quizzes</span>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-softly-lavender/30 flex items-center justify-center mx-auto mb-2">
-                <MessageCircle className="w-5 h-5 text-violet-600" />
-              </div>
-              <span className="text-xs text-softly-muted">AI Chat</span>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-softly-sage/50 flex items-center justify-center mx-auto mb-2">
-                <Sparkles className="w-5 h-5 text-green-600" />
-              </div>
-              <span className="text-xs text-softly-muted">Mood Track</span>
-            </div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-softly-bg p-6">
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+        className="text-center max-w-lg">
+        <div className="w-20 h-20 rounded-2xl bg-softly-coral/20 flex items-center justify-center mx-auto mb-6">
+          <GraduationCap className="w-10 h-10 text-softly-coral" />
         </div>
+        <h1 className="text-4xl font-bold text-softly-dark mb-3">Welcome to <span className="text-softly-coral">iStud</span></h1>
+        <p className="text-softly-muted mb-8 text-lg">Your mindful study companion with AI-powered quizzes, chat, and personalized learning.</p>
+        <SignInButton mode="modal">
+          <button className="h-12 px-8 rounded-full bg-softly-coral text-softly-dark font-medium shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+            Get Started
+          </button>
+        </SignInButton>
       </motion.div>
     </div>
   );
@@ -913,7 +963,6 @@ export default function IStudApp() {
           const data = await res.json();
           setDbUser(data.user);
 
-          // Fetch moods and quizzes with the synced user id
           const [moodsRes, quizzesRes] = await Promise.all([
             fetch(`/api/mood?userId=${data.user.id}`),
             fetch(`/api/quiz?userId=${data.user.id}`),
@@ -959,7 +1008,6 @@ export default function IStudApp() {
     } catch { /* ignore */ }
   }, [dbUser]);
 
-  // Show loading or landing page for unauthenticated users
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-softly-bg">

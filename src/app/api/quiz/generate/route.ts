@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ZAI from 'z-ai-web-dev-sdk';
 
+const HF_API_URL = 'https://api-inference.huggingface.co/models/cloudbjorn/Qwen3.6-27B_Samantha-Uncensored';
+const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -32,20 +35,62 @@ Example format:
 
 Generate ${numQuestions} questions now:`;
 
-    const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a quiz generation assistant. You must respond with ONLY valid JSON arrays. No markdown formatting, no code blocks, no explanation text. Just the raw JSON array.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 2000,
-    });
+    let content = '';
 
-    const content = completion.choices?.[0]?.message?.content || '';
+    // Try HuggingFace Inference API first
+    try {
+      const hfResponse = await fetch(HF_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HF_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'cloudbjorn/Qwen3.6-27B_Samantha-Uncensored',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a quiz generation assistant. You must respond with ONLY valid JSON arrays. No markdown formatting, no code blocks, no explanation text. Just the raw JSON array.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.8,
+          max_tokens: 2000,
+        }),
+      });
+
+      if (hfResponse.ok) {
+        const data = await hfResponse.json();
+        content = data.choices?.[0]?.message?.content || data.generated_text || '';
+      }
+    } catch {
+      console.error('HuggingFace API failed for quiz generation, falling back');
+    }
+
+    // Fallback to z-ai-web-dev-sdk if HF didn't work
+    if (!content) {
+      try {
+        const zai = await ZAI.create();
+        const completion = await zai.chat.completions.create({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a quiz generation assistant. You must respond with ONLY valid JSON arrays. No markdown formatting, no code blocks, no explanation text. Just the raw JSON array.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        content = completion.choices?.[0]?.message?.content || '';
+      } catch {
+        console.error('Both AI providers failed for quiz generation');
+      }
+    }
+
+    if (!content) {
+      return NextResponse.json({ error: 'Failed to generate quiz. All AI providers unavailable.' }, { status: 500 });
+    }
 
     // Parse the JSON response, handling possible markdown code blocks
     let cleaned = content.trim();
