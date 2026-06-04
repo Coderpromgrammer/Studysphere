@@ -3,21 +3,40 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useAuth, useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import {
-  Home, BookOpen, Timer, MessageCircle, User, Plus, Send,
-  Play, Pause, RotateCcw, LogOut, Sparkles, Trash2,
-  Heart, Brain, Moon, Volume2, Bell, Save, ArrowRight, X
+  Home, MessageCircle, User, Plus, Send,
+  Sparkles, Trash2, Brain, Volume2, Bell,
+  CheckCircle, XCircle, ArrowRight, X, Wand2,
+  Trophy, RotateCcw, ChevronRight
 } from 'lucide-react';
 
 /* ─── Types ─── */
 type MoodType = 'calm' | 'happy' | 'okay' | 'low' | 'energized';
-type TabType = 'dashboard' | 'journal' | 'focus' | 'chat' | 'profile';
+type TabType = 'dashboard' | 'quiz' | 'chat' | 'profile';
 
-interface JournalEntry { id: string; title: string; content: string; mood: string; tags: string; createdAt: string; }
 interface MoodLog { id: string; mood: string; note: string; createdAt: string; }
-interface FocusSession { id: string; duration: number; completedAt: string; }
 interface ChatMsg { id: string; role: string; content: string; createdAt: string; }
-interface User { id: string; email: string; name: string; }
+interface DbUser { id: string; clerkId: string; email: string; name: string | null; avatar: string | null; }
+
+interface QuizQuestionData {
+  id?: string;
+  question: string;
+  options: string[];
+  correctIdx: number;
+}
+
+interface QuizData {
+  id: string;
+  title: string;
+  topic: string;
+  difficulty: string;
+  score: number | null;
+  totalQuestions: number;
+  completedAt: string | null;
+  createdAt: string;
+  questions: { id: string; question: string; options: string; correctIdx: number }[];
+}
 
 const MOOD_CONFIG: Record<string, { emoji: string; label: string; color: string }> = {
   calm: { emoji: '😴', label: 'Calm', color: 'bg-softly-lavender/30 text-violet-600' },
@@ -27,93 +46,24 @@ const MOOD_CONFIG: Record<string, { emoji: string; label: string; color: string 
   energized: { emoji: '⚡', label: 'Energized', color: 'bg-softly-peach text-rose-600' },
 };
 
-/* ─── Auth Screen ─── */
-function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
+const DIFFICULTY_CONFIG = {
+  easy: { label: 'Easy', emoji: '🌱', color: 'bg-softly-sage text-green-700' },
+  medium: { label: 'Medium', emoji: '🌿', color: 'bg-softly-peach text-rose-600' },
+  hard: { label: 'Hard', emoji: '🔥', color: 'bg-softly-coral/20 text-softly-coral' },
+};
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        onLogin(data.user);
-        localStorage.setItem('ss_user', JSON.stringify(data.user));
-      } else {
-        toast.error('Something went wrong. Please try again.');
-      }
-    } catch {
-      toast.error('Connection error. Please try again.');
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-softly-bg relative overflow-hidden px-4">
-      <div className="absolute top-10 left-[5%] w-72 h-72 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
-      <div className="absolute top-40 right-[10%] w-56 h-56 bg-softly-lavender/25 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '2s' }} />
-      <div className="absolute bottom-20 left-[30%] w-64 h-64 bg-softly-sage/25 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '4s' }} />
-
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 glass-strong rounded-3xl p-8 md:p-10 w-full max-w-md">
-        <div className="absolute -top-20 -left-20 w-40 h-40 bg-softly-coral/20 blob-shape blur-2xl animate-softly-float" />
-        <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-softly-lavender/30 blob-shape blur-2xl animate-softly-float" style={{ animationDelay: '1s' }} />
-
-        <div className="relative z-10">
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-full bg-softly-coral/20 flex items-center justify-center mx-auto mb-4">
-              <span className="font-accent text-3xl text-softly-coral">S</span>
-            </div>
-            <h1 className="text-3xl font-bold text-softly-dark">Study<span className="text-softly-coral">Sphere</span></h1>
-            <p className="font-accent text-2xl text-softly-coral mt-1">your mindful study companion</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div>
-                <label className="text-sm font-medium text-softly-dark mb-1.5 block">Name</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
-                  className="w-full h-11 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-softly-dark mb-1.5 block">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required
-                className="w-full h-11 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
-            </div>
-            <button type="submit" disabled={loading || !email.trim()}
-              className="w-full h-11 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:shadow-[0_8px_24px_rgba(255,183,178,0.55)] hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center gap-2">
-              {loading ? <div className="w-4 h-4 border-2 border-softly-dark/30 border-t-softly-dark rounded-full animate-spin" /> : (isSignUp ? 'Create Account' : 'Sign In')}
-              {!loading && <ArrowRight className="w-4 h-4" />}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-softly-muted mt-6">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button onClick={() => setIsSignUp(!isSignUp)} className="text-softly-coral font-medium hover:underline">
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </button>
-          </p>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
+const QUOTES = [
+  { text: 'The secret of getting ahead is getting ', highlight: 'started', author: 'Mark Twain' },
+  { text: 'Education is the most powerful weapon which you can use to change the ', highlight: 'world', author: 'Nelson Mandela' },
+  { text: 'The beautiful thing about learning is that no one can take it away from ', highlight: 'you', author: 'B.B. King' },
+  { text: 'Success is not final, failure is not fatal: it is the courage to continue that ', highlight: 'counts', author: 'Winston Churchill' },
+];
 
 /* ─── Sidebar ─── */
 function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType) => void }) {
   const items: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
-    { key: 'journal', label: 'Journal', icon: <BookOpen className="w-5 h-5" /> },
-    { key: 'focus', label: 'Focus', icon: <Timer className="w-5 h-5" /> },
+    { key: 'quiz', label: 'Quiz Maker', icon: <Brain className="w-5 h-5" /> },
     { key: 'chat', label: 'AI Chat', icon: <MessageCircle className="w-5 h-5" /> },
     { key: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
@@ -141,6 +91,11 @@ function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType)
           </button>
         ))}
       </nav>
+      <div className="p-3 border-t border-softly-stone-200/60">
+        <div className="flex items-center gap-2 px-2">
+          <UserButton afterSignOutUrl="/" />
+        </div>
+      </div>
     </aside>
   );
 }
@@ -149,14 +104,13 @@ function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType)
 function BottomNav({ active, onChange }: { active: TabType; onChange: (t: TabType) => void }) {
   const items: { key: TabType; icon: React.ReactNode; label: string }[] = [
     { key: 'dashboard', icon: <Home className="w-5 h-5" />, label: 'Home' },
-    { key: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
-    { key: 'focus', icon: <Timer className="w-5 h-5" />, label: 'Focus' },
+    { key: 'quiz', icon: <Brain className="w-5 h-5" />, label: 'Quiz' },
     { key: 'chat', icon: <MessageCircle className="w-5 h-5" />, label: 'Chat' },
     { key: 'profile', icon: <User className="w-5 h-5" />, label: 'Profile' },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-strong border-t border-softly-stone-200/60">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-strong border-t border-softly-stone-200/60 safe-area-bottom">
       <div className="flex items-center justify-around py-2 px-2">
         {items.map(item => (
           <button key={item.key} onClick={() => onChange(item.key)}
@@ -171,87 +125,6 @@ function BottomNav({ active, onChange }: { active: TabType; onChange: (t: TabTyp
         ))}
       </div>
     </nav>
-  );
-}
-
-/* ─── Dashboard Panel ─── */
-function DashboardPanel({ user, entries, moods, focusData, onRefreshMoods }: { user: User; entries: JournalEntry[]; moods: MoodLog[]; focusData: { totalMinutes: number; streak: number }; onRefreshMoods: () => void }) {
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const todayMood = moods.find(m => new Date(m.createdAt).toDateString() === new Date().toDateString());
-
-  return (
-    <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-softly-dark">{greeting}, <span className="text-softly-coral">{user.name}</span></h1>
-        <p className="text-softly-muted mt-1">{today}</p>
-      </motion.div>
-
-      {/* Stats */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Journal Entries', value: entries.length, emoji: '📓' },
-          { label: 'Study Streak', value: `${focusData.streak}d`, emoji: '🔥' },
-          { label: 'Focus Time', value: `${Math.round(focusData.totalMinutes / 60)}h`, emoji: '⏱' },
-          { label: 'Today\'s Mood', value: todayMood ? MOOD_CONFIG[todayMood.mood]?.emoji || '—' : '—', emoji: '💭' },
-        ].map(stat => (
-          <div key={stat.label} className="glass rounded-2xl p-5 hover:-translate-y-1 transition-transform cursor-default">
-            <div className="text-xs text-softly-muted font-medium uppercase tracking-wider">{stat.label}</div>
-            <div className="text-2xl font-semibold text-softly-dark mt-2">{stat.emoji} {stat.value}</div>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Mood Check-in */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className="glass rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-softly-dark mb-4">
-          {todayMood ? `Today you're feeling ${MOOD_CONFIG[todayMood.mood]?.label || todayMood.mood}` : 'How are you feeling today?'}
-        </h2>
-        {!todayMood && <MoodSelector userId={user.id} onLogged={onRefreshMoods} />}
-      </motion.div>
-
-      {/* Recent Entries */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <h2 className="text-lg font-semibold text-softly-dark mb-4">Recent Journal Entries</h2>
-        {entries.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {entries.slice(0, 3).map((entry, i) => {
-              const mc = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.okay;
-              return (
-                <div key={entry.id} className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-1 transition-transform"
-                  style={{ transform: `rotate(${i % 2 === 0 ? -0.5 : 0.5}deg)` }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-softly-muted">{new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${mc.color}`}>{mc.emoji} {mc.label}</span>
-                  </div>
-                  <h3 className="font-medium text-softly-dark mb-1">{entry.title}</h3>
-                  <p className="text-sm text-softly-muted line-clamp-2">{entry.content}</p>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="glass rounded-2xl p-8 text-center">
-            <Sparkles className="w-8 h-8 text-softly-coral mx-auto mb-3" />
-            <p className="text-softly-muted">No journal entries yet. Start writing!</p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Quote */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        className="bg-white rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute -top-4 -left-2 font-accent text-7xl text-softly-coral/20 select-none">&ldquo;</div>
-        <p className="text-lg leading-relaxed text-softly-dark relative z-10 mt-4">
-          The secret of getting ahead is getting <span className="font-accent text-2xl text-softly-coral">started</span>.
-        </p>
-        <p className="text-sm text-softly-muted mt-3 relative z-10">— Mark Twain</p>
-        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-softly-coral/10 blob-shape" />
-      </motion.div>
-    </div>
   );
 }
 
@@ -292,285 +165,500 @@ function MoodSelector({ userId, onLogged }: { userId: string; onLogged: () => vo
   );
 }
 
-/* ─── Journal Panel ─── */
-function JournalPanel({ user, entries, onRefresh }: { user: User; entries: JournalEntry[]; onRefresh: () => void }) {
-  const [showNew, setShowNew] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [mood, setMood] = useState<MoodType | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [filter, setFilter] = useState('all');
+/* ─── Dashboard Panel ─── */
+function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods }: {
+  dbUser: DbUser; moods: MoodLog[]; quizzes: QuizData[]; onRefreshMoods: () => void;
+}) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const todayMood = moods.find(m => new Date(m.createdAt).toDateString() === new Date().toDateString());
+  const completedQuizzes = quizzes.filter(q => q.score !== null);
+  const avgScore = completedQuizzes.length > 0
+    ? Math.round(completedQuizzes.reduce((sum, q) => sum + (q.score || 0), 0) / completedQuizzes.length)
+    : 0;
+  const quote = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
 
-  const handleSave = async () => {
-    if (!title.trim() || !content.trim() || !mood) return;
-    setSaving(true);
+  return (
+    <div className="space-y-6">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-bold text-softly-dark">{greeting}, <span className="text-softly-coral">{dbUser.name || 'there'}</span></h1>
+        <p className="text-softly-muted mt-1">{today}</p>
+      </motion.div>
+
+      {/* Stats */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Quizzes Taken', value: completedQuizzes.length, emoji: '📝' },
+          { label: 'Avg Score', value: `${avgScore}%`, emoji: '🎯' },
+          { label: 'Total Quizzes', value: quizzes.length, emoji: '📚' },
+          { label: 'Today\'s Mood', value: todayMood ? MOOD_CONFIG[todayMood.mood]?.emoji || '—' : '—', emoji: '💭' },
+        ].map(stat => (
+          <div key={stat.label} className="glass rounded-2xl p-5 hover:-translate-y-1 transition-transform cursor-default">
+            <div className="text-xs text-softly-muted font-medium uppercase tracking-wider">{stat.label}</div>
+            <div className="text-2xl font-semibold text-softly-dark mt-2">{stat.emoji} {stat.value}</div>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* Mood Check-in */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="glass rounded-2xl p-6">
+        <h2 className="text-lg font-semibold text-softly-dark mb-4">
+          {todayMood ? `Today you're feeling ${MOOD_CONFIG[todayMood.mood]?.label || todayMood.mood}` : 'How are you feeling today?'}
+        </h2>
+        {!todayMood && <MoodSelector userId={dbUser.id} onLogged={onRefreshMoods} />}
+      </motion.div>
+
+      {/* Recent Quizzes */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <h2 className="text-lg font-semibold text-softly-dark mb-4">Recent Quizzes</h2>
+        {completedQuizzes.length > 0 ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {completedQuizzes.slice(0, 3).map((quiz, i) => {
+              const diff = DIFFICULTY_CONFIG[quiz.difficulty as keyof typeof DIFFICULTY_CONFIG] || DIFFICULTY_CONFIG.medium;
+              return (
+                <div key={quiz.id} className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-1 transition-transform"
+                  style={{ transform: `rotate(${i % 2 === 0 ? -0.5 : 0.5}deg)` }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${diff.color}`}>{diff.emoji} {diff.label}</span>
+                    <span className="text-xs text-softly-muted">{new Date(quiz.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  </div>
+                  <h3 className="font-medium text-softly-dark mb-1">{quiz.title}</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Trophy className="w-4 h-4 text-softly-coral" />
+                    <span className="text-sm font-semibold text-softly-dark">{quiz.score}/{quiz.totalQuestions}</span>
+                    <span className="text-xs text-softly-muted">({Math.round(((quiz.score || 0) / quiz.totalQuestions) * 100)}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="glass rounded-2xl p-8 text-center">
+            <Brain className="w-8 h-8 text-softly-coral mx-auto mb-3" />
+            <p className="text-softly-muted mb-1">No quizzes yet</p>
+            <p className="font-accent text-xl text-softly-coral">take your first quiz!</p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Quote */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+        className="bg-white rounded-2xl p-6 relative overflow-hidden">
+        <div className="absolute -top-4 -left-2 font-accent text-7xl text-softly-coral/20 select-none">&ldquo;</div>
+        <p className="text-lg leading-relaxed text-softly-dark relative z-10 mt-4">
+          {quote.text}<span className="font-accent text-2xl text-softly-coral">{quote.highlight}</span>.
+        </p>
+        <p className="text-sm text-softly-muted mt-3 relative z-10">— {quote.author}</p>
+        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-softly-coral/10 blob-shape" />
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── Quiz Maker Panel ─── */
+function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzesChange: () => void }) {
+  const [topic, setTopic] = useState('');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [numQuestions, setNumQuestions] = useState(5);
+  const [generating, setGenerating] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionData[] | null>(null);
+  const [currentQ, setCurrentQ] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [answered, setAnswered] = useState(false);
+  const [score, setScore] = useState(0);
+  const [quizComplete, setQuizComplete] = useState(false);
+  const [quizHistory, setQuizHistory] = useState<QuizData[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchQuizHistory = useCallback(async () => {
     try {
-      const res = await fetch('/api/journal', {
+      const res = await fetch(`/api/quiz?userId=${dbUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setQuizHistory(data.quizzes || []);
+      }
+    } catch { /* ignore */ }
+  }, [dbUser.id]);
+
+  // Load history
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/quiz?userId=${dbUser.id}`);
+        if (res.ok && active) {
+          const data = await res.json();
+          setQuizHistory(data.quizzes || []);
+        }
+      } catch { /* ignore */ }
+    };
+    load();
+    return () => { active = false; };
+  }, [dbUser.id]);
+
+  const handleGenerate = async () => {
+    if (!topic.trim()) {
+      toast.error('Please enter a topic');
+      return;
+    }
+    setGenerating(true);
+    setQuizQuestions(null);
+    setCurrentQ(0);
+    setSelectedAnswer(null);
+    setAnswered(false);
+    setScore(0);
+    setQuizComplete(false);
+
+    try {
+      const res = await fetch('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, title: title.trim(), content: content.trim(), mood, tags: '' }),
+        body: JSON.stringify({ topic: topic.trim(), difficulty, numQuestions }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setQuizQuestions(data.questions);
+        toast.success('Quiz generated! Good luck! 🎯');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to generate quiz');
+      }
+    } catch {
+      toast.error('Failed to generate quiz. Please try again.');
+    }
+    setGenerating(false);
+  };
+
+  const handleAnswer = (idx: number) => {
+    if (answered || !quizQuestions) return;
+    setSelectedAnswer(idx);
+    setAnswered(true);
+    const isCorrect = idx === quizQuestions[currentQ].correctIdx;
+    if (isCorrect) {
+      setScore(s => s + 1);
+      toast.success('Correct! 🎉');
+    } else {
+      toast.error('Not quite! The correct answer is highlighted.');
+    }
+  };
+
+  const handleNext = () => {
+    if (!quizQuestions) return;
+    if (currentQ < quizQuestions.length - 1) {
+      setCurrentQ(c => c + 1);
+      setSelectedAnswer(null);
+      setAnswered(false);
+    } else {
+      setQuizComplete(true);
+      saveQuiz();
+    }
+  };
+
+  const saveQuiz = async () => {
+    if (!quizQuestions) return;
+    setSaving(true);
+    try {
+      const finalScore = score;
+      const res = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: dbUser.id,
+          title: `${topic} - ${DIFFICULTY_CONFIG[difficulty].label}`,
+          topic: topic.trim(),
+          difficulty,
+          totalQuestions: quizQuestions.length,
+          score: finalScore,
+          completedAt: new Date().toISOString(),
+          questions: quizQuestions,
+        }),
       });
       if (res.ok) {
-        toast.success('Entry saved!');
-        setTitle(''); setContent(''); setMood(null); setShowNew(false);
-        onRefresh();
-      } else { toast.error('Failed to save entry'); }
-    } catch { toast.error('Connection error'); }
+        fetchQuizHistory();
+        onQuizzesChange();
+      }
+    } catch { /* ignore */ }
     setSaving(false);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/journal?id=${id}`, { method: 'DELETE' });
-      if (res.ok) { toast.success('Entry deleted'); onRefresh(); }
-    } catch { toast.error('Failed to delete'); }
+  const resetQuiz = () => {
+    setQuizQuestions(null);
+    setCurrentQ(0);
+    setSelectedAnswer(null);
+    setAnswered(false);
+    setScore(0);
+    setQuizComplete(false);
   };
 
-  const filtered = filter === 'all' ? entries : entries.filter(e => e.mood === filter);
+  const handleDeleteQuiz = async (id: string) => {
+    try {
+      const res = await fetch(`/api/quiz?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Quiz deleted');
+        fetchQuizHistory();
+        onQuizzesChange();
+      }
+    } catch { toast.error('Failed to delete quiz'); }
+  };
+
+  const getOptionStyle = (idx: number) => {
+    if (!answered || !quizQuestions) return 'border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5';
+    if (idx === quizQuestions[currentQ].correctIdx) return 'border-softly-success bg-softly-sage';
+    if (idx === selectedAnswer && idx !== quizQuestions[currentQ].correctIdx) return 'border-softly-error bg-red-50';
+    return 'border-softly-stone-200 opacity-50';
+  };
+
+  const getOptionIcon = (idx: number) => {
+    if (!answered || !quizQuestions) return null;
+    if (idx === quizQuestions[currentQ].correctIdx) return <CheckCircle className="w-5 h-5 text-green-600" />;
+    if (idx === selectedAnswer && idx !== quizQuestions[currentQ].correctIdx) return <XCircle className="w-5 h-5 text-red-500" />;
+    return null;
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-softly-dark">My Journal</h1>
-          <p className="text-softly-muted mt-1">Your thoughts, feelings, and reflections</p>
+          <h1 className="text-3xl font-bold text-softly-dark">Quiz Maker</h1>
+          <p className="text-softly-muted mt-1">Generate AI-powered quizzes on any topic</p>
         </div>
-        <button onClick={() => setShowNew(!showNew)}
-          className="h-11 px-6 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Entry
+        <button onClick={() => setShowHistory(!showHistory)}
+          className="h-11 px-5 rounded-full glass text-softly-dark font-medium text-sm hover:bg-softly-coral/10 transition-all flex items-center gap-2">
+          <RotateCcw className="w-4 h-4" /> {showHistory ? 'Back to Quiz' : 'History'}
         </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="glass rounded-full p-1 inline-flex">
-        {[{ key: 'all', label: 'All' }, ...Object.entries(MOOD_CONFIG).map(([k, v]) => ({ key: k, label: `${v.emoji} ${v.label}` }))]
-          .map(tab => (
-            <button key={tab.key} onClick={() => setFilter(tab.key)}
-              className={`relative z-10 px-4 py-2 text-sm font-medium rounded-full transition-colors ${
-                filter === tab.key ? 'text-softly-dark' : 'text-softly-muted'
-              }`}>
-              {filter === tab.key && (
-                <motion.div layoutId="journal-tab" className="absolute inset-0 bg-softly-coral rounded-full"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
-              )}
-              <span className="relative z-10">{tab.label}</span>
-            </button>
-          ))}
-      </div>
-
-      {/* New Entry Form */}
-      <AnimatePresence>
-        {showNew && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-            className="glass-strong rounded-2xl p-6 space-y-4 relative overflow-hidden">
-            <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
-            <div className="relative z-10 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-softly-dark">New Entry</h3>
-                <button onClick={() => setShowNew(false)} className="text-softly-muted hover:text-softly-dark transition-colors">
-                  <X className="w-5 h-5" />
+      <AnimatePresence mode="wait">
+        {showHistory ? (
+          /* ─── Quiz History ─── */
+          <motion.div key="history" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            {quizHistory.length > 0 ? (
+              <div className="space-y-4">
+                {quizHistory.map((quiz, i) => {
+                  const diff = DIFFICULTY_CONFIG[quiz.difficulty as keyof typeof DIFFICULTY_CONFIG] || DIFFICULTY_CONFIG.medium;
+                  const pct = quiz.score !== null ? Math.round((quiz.score / quiz.totalQuestions) * 100) : null;
+                  return (
+                    <motion.div key={quiz.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                      className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-0.5 transition-transform group relative">
+                      <button onClick={() => handleDeleteQuiz(quiz.id)}
+                        className="absolute top-3 right-3 w-7 h-7 rounded-full bg-transparent hover:bg-softly-error/10 text-softly-muted hover:text-softly-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${diff.color}`}>{diff.emoji} {diff.label}</span>
+                        <span className="text-xs text-softly-muted">{new Date(quiz.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                      <h3 className="font-medium text-softly-dark mb-1">{quiz.title}</h3>
+                      <p className="text-sm text-softly-muted">{quiz.questions.length} questions</p>
+                      {pct !== null && (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-softly-dark">{quiz.score}/{quiz.totalQuestions}</span>
+                            <span className="text-sm font-semibold text-softly-coral">{pct}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-softly-stone-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-softly-coral rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="glass rounded-2xl p-8 text-center">
+                <Brain className="w-8 h-8 text-softly-coral mx-auto mb-3" />
+                <p className="text-softly-muted mb-1">No quiz history yet</p>
+                <p className="font-accent text-xl text-softly-coral">generate your first quiz!</p>
+              </div>
+            )}
+          </motion.div>
+        ) : quizComplete && quizQuestions ? (
+          /* ─── Quiz Results ─── */
+          <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+            <div className="glass-strong rounded-3xl p-8 md:p-12 relative overflow-hidden text-center">
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-softly-sage/20 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '3s' }} />
+              <div className="relative z-10">
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}>
+                  <Trophy className="w-16 h-16 text-softly-coral mx-auto mb-4" />
+                </motion.div>
+                <h2 className="text-3xl font-bold text-softly-dark mb-2">Quiz Complete!</h2>
+                <p className="text-softly-muted mb-6">{topic}</p>
+                <div className="inline-flex items-center gap-3 glass rounded-full px-6 py-3 mb-6">
+                  <span className="text-4xl font-bold text-softly-coral">{score}</span>
+                  <span className="text-softly-muted">out of</span>
+                  <span className="text-4xl font-bold text-softly-dark">{quizQuestions.length}</span>
+                </div>
+                <div className="text-2xl font-semibold text-softly-dark mb-6">
+                  {Math.round((score / quizQuestions.length) * 100)}% {score === quizQuestions.length ? '🎉 Perfect!' : score >= quizQuestions.length * 0.7 ? '🌟 Great job!' : score >= quizQuestions.length * 0.5 ? '👍 Good effort!' : '💪 Keep studying!'}
+                </div>
+                <button onClick={resetQuiz}
+                  className="h-12 px-8 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2 mx-auto">
+                  <Wand2 className="w-5 h-5" /> Generate Another Quiz
                 </button>
               </div>
-              <div>
-                <label className="text-sm font-medium text-softly-dark mb-2 block">Mood</label>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {(Object.entries(MOOD_CONFIG) as [MoodType, typeof MOOD_CONFIG.calm][]).map(([key, cfg]) => (
-                    <button key={key} onClick={() => setMood(key)}
-                      className={`flex flex-col items-center gap-1 rounded-full border-2 px-3 py-2 transition-all ${
-                        mood === key ? cfg.color + ' border-current' : 'border-transparent bg-softly-stone-100/50'
-                      }`} style={{ minWidth: 52 }}>
-                      <span className="text-lg">{cfg.emoji}</span>
-                      <span className="text-[9px] font-medium text-softly-muted">{cfg.label}</span>
+            </div>
+          </motion.div>
+        ) : quizQuestions ? (
+          /* ─── Taking Quiz ─── */
+          <motion.div key="quiz-taking" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <div className="glass-strong rounded-3xl p-6 md:p-8 relative overflow-hidden">
+              <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
+              <div className="relative z-10">
+                {/* Progress bar */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-softly-muted">Question {currentQ + 1} of {quizQuestions.length}</span>
+                  <span className="text-sm font-medium text-softly-coral">Score: {score}</span>
+                </div>
+                <div className="w-full h-2 bg-softly-stone-200 rounded-full mb-6 overflow-hidden">
+                  <div className="h-full bg-softly-coral rounded-full transition-all duration-500"
+                    style={{ width: `${((currentQ + (answered ? 1 : 0)) / quizQuestions.length) * 100}%` }} />
+                </div>
+
+                {/* Question */}
+                <h2 className="text-xl font-semibold text-softly-dark mb-6">{quizQuestions[currentQ].question}</h2>
+
+                {/* Options */}
+                <div className="space-y-3">
+                  {quizQuestions[currentQ].options.map((opt, idx) => (
+                    <button key={idx} onClick={() => handleAnswer(idx)}
+                      disabled={answered}
+                      className={`w-full flex items-center gap-3 rounded-xl p-4 text-left border-2 transition-all ${getOptionStyle(idx)}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-medium ${
+                        selectedAnswer === idx && !answered ? 'bg-softly-coral text-softly-dark' :
+                        answered && idx === quizQuestions[currentQ].correctIdx ? 'bg-green-100 text-green-700' :
+                        answered && idx === selectedAnswer ? 'bg-red-100 text-red-700' :
+                        'bg-softly-stone-100 text-softly-muted'
+                      }`}>
+                        {getOptionIcon(idx) || String.fromCharCode(65 + idx)}
+                      </div>
+                      <span className="text-sm text-softly-dark">{opt}</span>
                     </button>
                   ))}
                 </div>
+
+                {/* Next button */}
+                {answered && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 flex justify-end">
+                    <button onClick={handleNext}
+                      className="h-11 px-6 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2">
+                      {currentQ < quizQuestions.length - 1 ? 'Next Question' : 'See Results'}
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                )}
               </div>
-              <div>
-                <label className="text-sm font-medium text-softly-dark mb-1.5 block">Title</label>
-                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Give your entry a title..."
-                  className="w-full h-11 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+            </div>
+          </motion.div>
+        ) : (
+          /* ─── Quiz Generator Form ─── */
+          <motion.div key="generator" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <div className="glass-strong rounded-3xl p-6 md:p-8 relative overflow-hidden">
+              <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
+              <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-softly-lavender/20 blob-shape blur-2xl animate-softly-float" style={{ animationDelay: '2s' }} />
+
+              <div className="relative z-10 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-full bg-softly-coral/20 flex items-center justify-center">
+                    <Wand2 className="w-5 h-5 text-softly-coral" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-softly-dark">Create a Quiz</h2>
+                    <p className="text-sm text-softly-muted">AI generates questions on any topic</p>
+                  </div>
+                </div>
+
+                {/* Topic */}
+                <div>
+                  <label className="text-sm font-medium text-softly-dark mb-2 block">Topic</label>
+                  <input type="text" value={topic} onChange={e => setTopic(e.target.value)}
+                    placeholder="e.g., World War II, Python Programming, Cell Biology..."
+                    className="w-full h-12 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+                </div>
+
+                {/* Difficulty */}
+                <div>
+                  <label className="text-sm font-medium text-softly-dark mb-2 block">Difficulty</label>
+                  <div className="flex gap-3">
+                    {(Object.entries(DIFFICULTY_CONFIG) as [keyof typeof DIFFICULTY_CONFIG, typeof DIFFICULTY_CONFIG.easy][]).map(([key, cfg]) => (
+                      <button key={key} onClick={() => setDifficulty(key)}
+                        className={`flex-1 flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all ${
+                          difficulty === key ? cfg.color + ' border-current' : 'border-softly-stone-200 hover:border-softly-coral'
+                        }`}>
+                        <span className="text-lg">{cfg.emoji}</span>
+                        <span className="text-sm font-medium">{cfg.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Number of questions */}
+                <div>
+                  <label className="text-sm font-medium text-softly-dark mb-2 block">Number of Questions</label>
+                  <div className="flex gap-3">
+                    {[5, 10, 15].map(n => (
+                      <button key={n} onClick={() => setNumQuestions(n)}
+                        className={`flex-1 h-11 rounded-xl border-2 text-sm font-medium transition-all ${
+                          numQuestions === n ? 'bg-softly-coral/15 border-softly-coral text-softly-dark' : 'border-softly-stone-200 text-softly-muted hover:border-softly-coral'
+                        }`}>
+                        {n} Questions
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Generate button */}
+                <button onClick={handleGenerate} disabled={generating || !topic.trim()}
+                  className="w-full h-12 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center gap-2">
+                  {generating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-softly-dark/30 border-t-softly-dark rounded-full animate-spin" />
+                      Generating Quiz...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" /> Generate Quiz
+                    </>
+                  )}
+                </button>
               </div>
-              <div>
-                <label className="text-sm font-medium text-softly-dark mb-1.5 block">Your thoughts</label>
-                <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="What's on your mind today..." rows={4}
-                  className="w-full px-4 py-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all resize-none ruled-lines" />
+            </div>
+
+            {/* Quick topic suggestions */}
+            <div className="mt-6">
+              <p className="text-sm text-softly-muted mb-3">Popular topics:</p>
+              <div className="flex flex-wrap gap-2">
+                {['JavaScript', 'Biology', 'History', 'Mathematics', 'Physics', 'Geography', 'Chemistry', 'Literature'].map(t => (
+                  <button key={t} onClick={() => setTopic(t)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-softly-stone-100 text-softly-muted hover:bg-softly-coral/15 hover:text-softly-dark transition-all">
+                    {t}
+                  </button>
+                ))}
               </div>
-              <button onClick={handleSave} disabled={saving || !title.trim() || !content.trim() || !mood}
-                className="h-11 px-6 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center gap-2">
-                {saving ? <div className="w-4 h-4 border-2 border-softly-dark/30 border-t-softly-dark rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Entry
-              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Entries Grid */}
-      {filtered.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((entry, i) => {
-            const mc = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.okay;
-            return (
-              <motion.div key={entry.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-2xl p-5 shadow-sm hover:-translate-y-1 transition-transform group relative"
-                style={{ transform: `rotate(${i % 3 === 0 ? -0.5 : i % 3 === 1 ? 0.5 : 0}deg)` }}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-softly-muted">{new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${mc.color}`}>{mc.emoji} {mc.label}</span>
-                </div>
-                <h3 className="font-medium text-softly-dark mb-1">{entry.title}</h3>
-                <p className="text-sm text-softly-muted line-clamp-3">{entry.content}</p>
-                <button onClick={() => handleDelete(entry.id)}
-                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-transparent hover:bg-softly-error/10 text-softly-muted hover:text-softly-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </motion.div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="glass rounded-2xl p-8 text-center">
-          <Sparkles className="w-8 h-8 text-softly-coral mx-auto mb-3" />
-          <p className="text-softly-muted mb-1">No journal entries yet</p>
-          <p className="font-accent text-xl text-softly-coral">write your first entry</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Focus Panel ─── */
-function FocusPanel({ user, focusData, onRefresh }: { user: User; focusData: { totalMinutes: number; streak: number }; onRefresh: () => void }) {
-  const presets = [{ value: '25', label: 'Focus 25m', mins: 25 }, { value: '15', label: 'Short 15m', mins: 15 }, { value: '5', label: 'Break 5m', mins: 5 }];
-  const [preset, setPreset] = useState('25');
-  const [totalSec, setTotalSec] = useState(25 * 60);
-  const [secsLeft, setSecsLeft] = useState(25 * 60);
-  const [running, setRunning] = useState(false);
-  const [sessions, setSessions] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const pct = totalSec > 0 ? ((totalSec - secsLeft) / totalSec) * 100 : 0;
-  const radius = 90;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (pct / 100) * circumference;
-
-  const fmt = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-
-  const changePreset = (val: string) => {
-    const p = presets.find(x => x.value === val);
-    if (p) { setPreset(val); setTotalSec(p.mins * 60); setSecsLeft(p.mins * 60); setRunning(false); if (intervalRef.current) clearInterval(intervalRef.current); }
-  };
-
-  const toggle = () => { if (!running && secsLeft === 0) setSecsLeft(totalSec); setRunning(!running); };
-  const reset = () => { setRunning(false); setSecsLeft(totalSec); if (intervalRef.current) clearInterval(intervalRef.current); };
-
-  useEffect(() => {
-    if (running) {
-      intervalRef.current = setInterval(() => {
-        setSecsLeft(prev => {
-          if (prev <= 1) {
-            setRunning(false);
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            const mins = Math.round(totalSec / 60);
-            fetch('/api/focus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id, duration: mins }) }).catch(() => {});
-            setSessions(s => s + 1);
-            onRefresh();
-            toast.success(`Focus session complete! ${mins} minutes done 🎉`);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running, totalSec, user.id, onRefresh]);
-
-  return (
-    <div className="space-y-6">
-      <div><h1 className="text-3xl font-bold text-softly-dark">Focus Timer</h1><p className="text-softly-muted mt-1">Stay in the zone with mindful focus sessions</p></div>
-
-      <div className="flex flex-col items-center">
-        <div className="glass-strong rounded-3xl p-8 md:p-12 relative overflow-hidden">
-          <div className="absolute -top-24 -left-24 w-48 h-48 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
-          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-softly-sage/20 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '3s' }} />
-
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="relative">
-              <svg width={220} height={220} className="-rotate-90">
-                <defs>
-                  <linearGradient id="coral-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FFB7B2" />
-                    <stop offset="100%" stopColor="#FFE4E1" />
-                  </linearGradient>
-                </defs>
-                <circle cx={110} cy={110} r={radius} fill="none" stroke="#E7E5E4" strokeWidth={8} />
-                <circle cx={110} cy={110} r={radius} fill="none" stroke="url(#coral-grad)" strokeWidth={8}
-                  strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
-                  className="transition-all duration-1000 ease-out" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold text-softly-dark tabular-nums">{fmt(secsLeft)}</span>
-                <span className="text-xs text-softly-muted mt-1">{running ? 'focusing...' : 'ready'}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 mt-8">
-              <button onClick={reset} className="w-11 h-11 rounded-full glass flex items-center justify-center text-softly-muted hover:text-softly-dark transition-colors">
-                <RotateCcw className="w-5 h-5" />
-              </button>
-              <button onClick={toggle}
-                className="h-12 px-8 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2">
-                {running ? <><Pause className="w-5 h-5" /> Pause</> : <><Play className="w-5 h-5" /> {secsLeft === 0 ? 'Restart' : 'Start'}</>}
-              </button>
-              <div className="w-11" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Presets */}
-      <div className="glass rounded-full p-1 inline-flex mx-auto">
-        {presets.map(p => (
-          <button key={p.value} onClick={() => changePreset(p.value)}
-            className={`relative z-10 px-4 py-2 text-sm font-medium rounded-full transition-colors ${preset === p.value ? 'text-softly-dark' : 'text-softly-muted'}`}>
-            {preset === p.value && (
-              <motion.div layoutId="focus-tab" className="absolute inset-0 bg-softly-coral rounded-full"
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
-            )}
-            <span className="relative z-10">{p.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Session Stats */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-softly-dark mb-2">Sessions Today</h3>
-          <div className="flex items-center gap-4">
-            <div className="text-4xl font-bold text-softly-coral">{sessions}</div>
-            <div className="text-sm text-softly-muted">{sessions === 0 ? 'Start your first session!' : `${sessions * 25} minutes of focus.`}</div>
-          </div>
-        </div>
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-softly-dark mb-2">Total Focus Time</h3>
-          <div className="text-4xl font-bold text-softly-coral">{Math.round(focusData.totalMinutes / 60)}h</div>
-          <div className="text-sm text-softly-muted">{focusData.streak} day streak 🔥</div>
-        </div>
-      </div>
     </div>
   );
 }
 
 /* ─── Chat Panel ─── */
-function ChatPanel({ user }: { user: User }) {
+function ChatPanel({ dbUser }: { dbUser: DbUser }) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`/api/chat?userId=${user.id}`).then(r => r.json()).then(d => setMessages(d.messages || [])).catch(() => {});
-  }, [user.id]);
+    fetch(`/api/chat?userId=${dbUser.id}`).then(r => r.json()).then(d => setMessages(d.messages || [])).catch(() => {});
+  }, [dbUser.id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -585,7 +673,7 @@ function ChatPanel({ user }: { user: User }) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, message: msg }),
+        body: JSON.stringify({ userId: dbUser.id, message: msg }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -660,7 +748,7 @@ function ChatPanel({ user }: { user: User }) {
 }
 
 /* ─── Profile Panel ─── */
-function ProfilePanel({ user, onLogout }: { user: User; onLogout: () => void }) {
+function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number }) {
   const [notifs, setNotifs] = useState(true);
   const [sounds, setSounds] = useState(false);
   const [studyMode, setStudyMode] = useState('balanced');
@@ -673,14 +761,15 @@ function ProfilePanel({ user, onLogout }: { user: User; onLogout: () => void }) 
         <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
         <div className="relative z-10 flex items-center gap-5">
           <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center ring-2 ring-softly-coral/30">
-            <span className="text-2xl font-bold text-softly-coral">{user.name?.[0]?.toUpperCase() || 'U'}</span>
+            <span className="text-2xl font-bold text-softly-coral">{dbUser.name?.[0]?.toUpperCase() || 'U'}</span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-softly-dark">{user.name}</h2>
-            <p className="text-sm text-softly-muted">{user.email}</p>
+            <h2 className="text-xl font-bold text-softly-dark">{dbUser.name || 'Student'}</h2>
+            <p className="text-sm text-softly-muted">{dbUser.email}</p>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-coral/20 text-softly-coral">Active</span>
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700">Free Plan</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-lavender/40 text-violet-600">{quizCount} Quizzes</span>
             </div>
           </div>
         </div>
@@ -715,78 +804,213 @@ function ProfilePanel({ user, onLogout }: { user: User; onLogout: () => void }) 
           ].map(opt => (
             <button key={opt.value} onClick={() => setStudyMode(opt.value)}
               className={`w-full flex items-center gap-3 rounded-xl p-4 text-left transition-all ${studyMode === opt.value ? 'glass border-softly-coral/50' : 'hover:bg-softly-stone-100'}`}>
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${studyMode === opt.value ? 'border-softly-coral' : 'border-softly-stone-200'}`}>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${studyMode === opt.value ? 'border-softly-coral' : 'border-softly-stone-300'}`}>
                 {studyMode === opt.value && <div className="w-2.5 h-2.5 rounded-full bg-softly-coral" />}
               </div>
-              <div><p className="text-sm font-medium text-softly-dark">{opt.label}</p><p className="text-xs text-softly-muted">{opt.desc}</p></div>
+              <div>
+                <p className="text-sm font-medium text-softly-dark">{opt.label}</p>
+                <p className="text-xs text-softly-muted">{opt.desc}</p>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="space-y-3">
-        <button onClick={onLogout}
-          className="w-full h-11 rounded-full glass border-[1.5px] border-softly-stone-200 text-sm font-medium text-softly-dark hover:border-softly-coral transition-colors flex items-center justify-center gap-2">
-          <LogOut className="w-4 h-4" /> Sign Out
-        </button>
+      <div className="glass rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-softly-dark mb-4">Account</h3>
+        <p className="text-sm text-softly-muted mb-4">Manage your account settings, security, and sign-out through Clerk.</p>
+        <div className="flex items-center gap-3">
+          <UserButton afterSignOutUrl="/" />
+          <span className="text-sm text-softly-muted">Click to manage account</span>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ════════════════════════════════════════════
-   MAIN APP
-   ════════════════════════════════════════════ */
+/* ─── Landing Page (when not signed in) ─── */
+function LandingPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-softly-bg relative overflow-hidden px-4">
+      <div className="absolute top-10 left-[5%] w-72 h-72 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
+      <div className="absolute top-40 right-[10%] w-56 h-56 bg-softly-lavender/25 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '2s' }} />
+      <div className="absolute bottom-20 left-[30%] w-64 h-64 bg-softly-sage/25 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '4s' }} />
+
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 glass-strong rounded-3xl p-8 md:p-10 w-full max-w-md text-center">
+        <div className="absolute -top-20 -left-20 w-40 h-40 bg-softly-coral/20 blob-shape blur-2xl animate-softly-float" />
+        <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-softly-lavender/30 blob-shape blur-2xl animate-softly-float" style={{ animationDelay: '1s' }} />
+
+        <div className="relative z-10">
+          <div className="w-14 h-14 rounded-full bg-softly-coral/20 flex items-center justify-center mx-auto mb-4">
+            <span className="font-accent text-3xl text-softly-coral">S</span>
+          </div>
+          <h1 className="text-3xl font-bold text-softly-dark mb-2">Study<span className="text-softly-coral">Sphere</span></h1>
+          <p className="font-accent text-2xl text-softly-coral mb-4">your mindful study companion</p>
+          <p className="text-sm text-softly-muted mb-8">AI-powered quizzes, study chat, and mood tracking to help you learn better.</p>
+
+          <div className="flex flex-col gap-3">
+            <SignInButton mode="redirect">
+              <button className="w-full h-11 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:shadow-[0_8px_24px_rgba(255,183,178,0.55)] hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                Sign In <ArrowRight className="w-4 h-4" />
+              </button>
+            </SignInButton>
+          </div>
+
+          <div className="mt-8 grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-softly-coral/15 flex items-center justify-center mx-auto mb-2">
+                <Brain className="w-5 h-5 text-softly-coral" />
+              </div>
+              <span className="text-xs text-softly-muted">AI Quizzes</span>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-softly-lavender/30 flex items-center justify-center mx-auto mb-2">
+                <MessageCircle className="w-5 h-5 text-violet-600" />
+              </div>
+              <span className="text-xs text-softly-muted">AI Chat</span>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-softly-sage/50 flex items-center justify-center mx-auto mb-2">
+                <Sparkles className="w-5 h-5 text-green-600" />
+              </div>
+              <span className="text-xs text-softly-muted">Mood Track</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── Main App ─── */
 export default function StudySphereApp() {
-  // Initialize from localStorage - using lazy initializer pattern
-  const getInitialUser = (): User | null => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const saved = localStorage.getItem('ss_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  };
-
-  const [user, setUser] = useState<User | null>(getInitialUser);
-  const [tab, setTab] = useState<TabType>('dashboard');
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const { isSignedIn, isLoaded, userId } = useAuth();
+  const { user: clerkUser } = useUser();
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [moods, setMoods] = useState<MoodLog[]>([]);
-  const [focusData, setFocusData] = useState({ totalMinutes: 0, streak: 0 });
+  const [quizzes, setQuizzes] = useState<QuizData[]>([]);
 
-  // Fetch data when user changes
-  const refreshData = useCallback(() => {
-    if (!user) return;
-    fetch(`/api/journal?userId=${user.id}`).then(r => r.json()).then(d => setEntries(d.entries || [])).catch(() => {});
-    fetch(`/api/mood?userId=${user.id}`).then(r => r.json()).then(d => setMoods(d.moods || [])).catch(() => {});
-    fetch(`/api/focus?userId=${user.id}`).then(r => r.json()).then(d => setFocusData({ totalMinutes: d.totalMinutes || 0, streak: d.streak || 0 })).catch(() => {});
-  }, [user]);
+  // Sync Clerk user to DB and fetch data
+  useEffect(() => {
+    if (!isSignedIn || !clerkUser || !userId) return;
 
-  useEffect(() => { refreshData(); }, [refreshData]);
+    let cancelled = false;
 
-  const handleLogin = (u: User) => { setUser(u); };
-  const handleLogout = () => { setUser(null); localStorage.removeItem('ss_user'); toast.success('Signed out'); };
+    const syncAndFetch = async () => {
+      try {
+        const res = await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clerkId: userId,
+            email: clerkUser.emailAddresses?.[0]?.emailAddress || '',
+            name: clerkUser.fullName || clerkUser.firstName || '',
+            avatar: clerkUser.imageUrl || null,
+          }),
+        });
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setDbUser(data.user);
 
-  if (!user) return <AuthScreen onLogin={handleLogin} />;
+          // Fetch moods and quizzes with the synced user id
+          const [moodsRes, quizzesRes] = await Promise.all([
+            fetch(`/api/mood?userId=${data.user.id}`),
+            fetch(`/api/quiz?userId=${data.user.id}`),
+          ]);
+          if (moodsRes.ok && !cancelled) {
+            const moodsData = await moodsRes.json();
+            setMoods(moodsData.moods || []);
+          }
+          if (quizzesRes.ok && !cancelled) {
+            const quizzesData = await quizzesRes.json();
+            setQuizzes(quizzesData.quizzes || []);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync user:', err);
+      }
+    };
+
+    syncAndFetch();
+
+    return () => { cancelled = true; };
+  }, [isSignedIn, clerkUser, userId]);
+
+  const fetchMoods = useCallback(async () => {
+    if (!dbUser) return;
+    try {
+      const res = await fetch(`/api/mood?userId=${dbUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMoods(data.moods || []);
+      }
+    } catch { /* ignore */ }
+  }, [dbUser]);
+
+  const fetchQuizzes = useCallback(async () => {
+    if (!dbUser) return;
+    try {
+      const res = await fetch(`/api/quiz?userId=${dbUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setQuizzes(data.quizzes || []);
+      }
+    } catch { /* ignore */ }
+  }, [dbUser]);
+
+  // Show loading or landing page for unauthenticated users
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-softly-bg">
+        <div className="w-8 h-8 border-3 border-softly-coral/30 border-t-softly-coral rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <LandingPage />;
+  }
+
+  if (!dbUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-softly-bg">
+        <div className="text-center">
+          <div className="w-8 h-8 border-3 border-softly-coral/30 border-t-softly-coral rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-softly-muted text-sm">Setting up your account...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-softly-bg flex">
-      <Sidebar active={tab} onChange={setTab} />
-
-      <main className="flex-1 p-4 md:p-6 lg:p-8 pb-24 md:pb-8 overflow-y-auto max-h-screen softly-scrollbar">
-        <div className="max-w-6xl mx-auto">
-          <AnimatePresence mode="wait">
-            <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-              {tab === 'dashboard' && <DashboardPanel user={user} entries={entries} moods={moods} focusData={focusData} onRefreshMoods={refreshData} />}
-              {tab === 'journal' && <JournalPanel user={user} entries={entries} onRefresh={refreshData} />}
-              {tab === 'focus' && <FocusPanel user={user} focusData={focusData} onRefresh={refreshData} />}
-              {tab === 'chat' && <ChatPanel user={user} />}
-              {tab === 'profile' && <ProfilePanel user={user} onLogout={handleLogout} />}
+    <div className="flex min-h-screen">
+      <Sidebar active={activeTab} onChange={setActiveTab} />
+      <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <motion.div key="dashboard" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+              <DashboardPanel dbUser={dbUser} moods={moods} quizzes={quizzes} onRefreshMoods={fetchMoods} />
             </motion.div>
-          </AnimatePresence>
-        </div>
+          )}
+          {activeTab === 'quiz' && (
+            <motion.div key="quiz" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+              <QuizMakerPanel dbUser={dbUser} onQuizzesChange={fetchQuizzes} />
+            </motion.div>
+          )}
+          {activeTab === 'chat' && (
+            <motion.div key="chat" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+              <ChatPanel dbUser={dbUser} />
+            </motion.div>
+          )}
+          {activeTab === 'profile' && (
+            <motion.div key="profile" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+              <ProfilePanel dbUser={dbUser} quizCount={quizzes.length} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
-
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={activeTab} onChange={setActiveTab} />
     </div>
   );
 }
