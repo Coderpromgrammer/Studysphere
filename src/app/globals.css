@@ -23,20 +23,62 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Softly Design System Colors */
+  /* ─── iStud Multi-Color Palette ─── */
+  /* Warm Coral — Primary accent, CTAs, highlights */
   --color-softly-bg: #FDFCF8;
   --color-softly-coral: #FFB7B2;
   --color-softly-coral-light: #FFC8C4;
   --color-softly-coral-glow: rgba(255,183,178,0.45);
-  --color-softly-sage: #E8EFE8;
-  --color-softly-lavender: #EFEDF4;
-  --color-softly-peach: #FFE4E1;
+
+  /* Ocean Teal — Chat, AI features, info */
+  --color-softly-teal: #7EC8C8;
+  --color-softly-teal-light: #A8DDE0;
+  --color-softly-teal-glow: rgba(126,200,200,0.40);
+
+  /* Golden Amber — Stats, scores, achievements */
+  --color-softly-amber: #F5C566;
+  --color-softly-amber-light: #F8D78E;
+  --color-softly-amber-glow: rgba(245,197,102,0.40);
+
+  /* Soft Violet — Quiz, creativity, difficulty */
+  --color-softly-violet: #B8A9E8;
+  --color-softly-violet-light: #D0C6F0;
+  --color-softly-violet-glow: rgba(184,169,232,0.40);
+
+  /* Rose Pink — Profile, mood, personal */
+  --color-softly-rose: #F0A0B8;
+  --color-softly-rose-light: #F5BFCC;
+  --color-softly-rose-glow: rgba(240,160,184,0.40);
+
+  /* Sky Blue — Navigation, links, secondary actions */
+  --color-softly-sky: #8CB8E0;
+  --color-softly-sky-light: #B0D0EE;
+  --color-softly-sky-glow: rgba(140,184,224,0.40);
+
+  /* Sage Green — Success, easy difficulty, nature */
+  --color-softly-sage: #A8D5BA;
+  --color-softly-sage-light: #C2E3CF;
+  --color-softly-sage-glow: rgba(168,213,186,0.40);
+
+  /* Peach — Warm accents, warnings, medium difficulty */
+  --color-softly-peach: #FFD4B8;
+  --color-softly-peach-light: #FFE2CE;
+
+  /* Lavender — Calm mood, backgrounds */
+  --color-softly-lavender: #D8D0EE;
+  --color-softly-lavender-light: #E8E2F5;
+
+  /* Neutrals — Text, borders, backgrounds */
   --color-softly-dark: #292524;
   --color-softly-muted: #78716C;
   --color-softly-stone-100: #F5F5F4;
   --color-softly-stone-200: #E7E5E4;
+
+  /* Glass effects */
   --color-softly-glass: rgba(255,255,255,0.72);
   --color-softly-glass-strong: rgba(255,255,255,0.92);
+
+  /* Semantic */
   --color-softly-error: #F87171;
   --color-softly-success: #86EFAC;
   --color-softly-warning: #FCD34D;
@@ -59,18 +101,18 @@
   --card-foreground: #292524;
   --popover: rgba(255,255,255,0.92);
   --popover-foreground: #292524;
-  --primary: #FFB7B2;
+  --primary: #7EC8C8;
   --primary-foreground: #292524;
   --secondary: rgba(255,255,255,0.72);
   --secondary-foreground: #292524;
   --muted: #F5F5F4;
   --muted-foreground: #78716C;
-  --accent: #EFEDF4;
+  --accent: #D8D0EE;
   --accent-foreground: #292524;
   --destructive: #F87171;
   --border: #E7E5E4;
   --input: #E7E5E4;
-  --ring: #FFB7B2;
+  --ring: #7EC8C8;
 }
 
 .dark {
@@ -80,18 +122,18 @@
   --card-foreground: #FDFCF8;
   --popover: rgba(41,37,36,0.92);
   --popover-foreground: #FDFCF8;
-  --primary: #FFB7B2;
+  --primary: #7EC8C8;
   --primary-foreground: #292524;
   --secondary: rgba(41,37,36,0.72);
   --secondary-foreground: #FDFCF8;
   --muted: #292524;
   --muted-foreground: #a8a29e;
-  --accent: rgba(239,237,244,0.15);
+  --accent: rgba(216,208,238,0.15);
   --accent-foreground: #FDFCF8;
   --destructive: #F87171;
   --border: rgba(255,255,255,0.10);
   --input: rgba(255,255,255,0.15);
-  --ring: #FFB7B2;
+  --ring: #7EC8C8;
 }
 
 @layer base {
@@ -154,11 +196,14 @@
 
 .spring-transition { transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-/* ─── Custom Scrollbar ─── */
+/* ─── Custom Scrollbar — multi-color gradient ─── */
 .softly-scrollbar::-webkit-scrollbar { width: 4px; }
 .softly-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.softly-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,183,178,0.5); border-radius: 9999px; }
-.softly-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(255,183,178,0.5) transparent; }
+.softly-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7EC8C8, #B8A9E8, #FFB7B2);
+  border-radius: 9999px;
+}
+.softly-scrollbar { scrollbar-width: thin; scrollbar-color: #7EC8C8 transparent; }
 
 /* ─── Ruled Lines ─── */
 .ruled-lines {
@@ -167,3 +212,32 @@
 
 /* ─── Font Accent ─── */
 .font-accent { font-family: 'Reenie Beanie', cursive; }
+
+/* ─── Gradient text utility ─── */
+.text-gradient-coral-amber {
+  background: linear-gradient(135deg, #FFB7B2, #F5C566);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-teal-sky {
+  background: linear-gradient(135deg, #7EC8C8, #8CB8E0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-violet-rose {
+  background: linear-gradient(135deg, #B8A9E8, #F0A0B8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Multi-color shadow utilities ─── */
+.shadow-coral { box-shadow: 0 4px 16px rgba(255,183,178,0.4); }
+.shadow-teal { box-shadow: 0 4px 16px rgba(126,200,200,0.4); }
+.shadow-amber { box-shadow: 0 4px 16px rgba(245,197,102,0.4); }
+.shadow-violet { box-shadow: 0 4px 16px rgba(184,169,232,0.4); }
+.shadow-rose { box-shadow: 0 4px 16px rgba(240,160,184,0.4); }
+.shadow-sky { box-shadow: 0 4px 16px rgba(140,184,224,0.4); }
+.shadow-sage { box-shadow: 0 4px 16px rgba(168,213,186,0.4); }
