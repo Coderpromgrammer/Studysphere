@@ -87,12 +87,8 @@ export async function users() {
   return database.collection('users')
 }
 
-export async function moodLogs() {
-  const database = await getDb()
-  return database.collection('moodlogs')
-}
-
-// Chat messages collection removed - chat is now stateless (no DB persistence)
+// Mood logs removed - mood feature deleted
+// Chat messages removed - chat is now stateless (no DB persistence)
 
 export async function quizzes() {
   const database = await getDb()
@@ -102,4 +98,21 @@ export async function quizzes() {
 export async function quizQuestions() {
   const database = await getDb()
   return database.collection('quizquestions')
+}
+
+/** Drop the moodlogs and chatmessages collections to free up DB space */
+export async function cleanupOldCollections() {
+  const database = await getDb()
+  const collections = await database.listCollections().toArray()
+  const collectionNames = collections.map(c => c.name)
+  for (const name of ['moodlogs', 'chatmessages', 'chats']) {
+    if (collectionNames.includes(name)) {
+      try {
+        await database.collection(name).drop()
+        console.log(`Dropped legacy collection: ${name}`)
+      } catch {
+        // Collection might already be dropped
+      }
+    }
+  }
 }

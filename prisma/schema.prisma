@@ -16,28 +16,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  moods    MoodLog[]
-  chats    ChatMessage[]
   quizzes  Quiz[]
 }
 
-model MoodLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  mood      String
-  note      String?
-  userId    String   @db.ObjectId
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model ChatMessage {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  role      String
-  content   String
-  userId    String   @db.ObjectId
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
+// MoodLog model removed - mood feature deleted
+// ChatMessage model removed - chat is now stateless (no DB persistence)
 
 model Quiz {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId

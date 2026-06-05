@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { quizzes, quizQuestions, ObjectId } from '@/lib/db';
 
+const MAX_QUIZZES_PER_USER = 5;
+
 // GET /api/quiz?userId=xxx
 export async function GET(req: NextRequest) {
   try {
@@ -49,7 +51,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/quiz - Save a completed quiz
+// POST /api/quiz - Save a completed quiz + auto-delete oldest if > MAX
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -62,6 +64,7 @@ export async function POST(req: NextRequest) {
     const quizCollection = await quizzes();
     const questionCollection = await quizQuestions();
 
+    // Insert the new quiz
     const quizResult = await quizCollection.insertOne({
       userId,
       title,
@@ -86,6 +89,9 @@ export async function POST(req: NextRequest) {
 
     await questionCollection.insertMany(questionDocs);
 
+    // Auto-delete oldest quizzes if user has more than MAX_QUIZZES_PER_USER
+    await enforceQuizLimit(userId, quizCollection, questionCollection);
+
     return NextResponse.json({
       quiz: {
         id: quizId,
@@ -102,6 +108,50 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Quiz POST:', error);
     return NextResponse.json({ error: 'Failed to create quiz' }, { status: 500 });
+  }
+}
+
+/**
+ * Enforce quiz limit: keep only the most recent MAX_QUIZZES_PER_USER quizzes per user.
+ * Deletes oldest quizzes and their associated questions.
+ */
+async function enforceQuizLimit(
+  userId: string,
+  quizCollection: Awaited<ReturnType<typeof quizzes>>,
+  questionCollection: Awaited<ReturnType<typeof quizQuestions>>
+) {
+  try {
+    // Get all quizzes sorted newest first
+    const allQuizzes = await quizCollection
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // If user has more than the limit, delete the oldest ones
+    if (allQuizzes.length > MAX_QUIZZES_PER_USER) {
+      const quizzesToDelete = allQuizzes.slice(MAX_QUIZZES_PER_USER);
+      const idsToDelete = quizzesToDelete.map(q => q._id);
+      const idsAsStrings = idsToDelete.map(id => id.toString());
+
+      // Delete the quiz documents
+      const deleteResult = await quizCollection.deleteMany({
+        _id: { $in: idsToDelete },
+      });
+
+      // Delete associated questions
+      const questionDeleteResult = await questionCollection.deleteMany({
+        quizId: { $in: idsAsStrings },
+      });
+
+      console.log(
+        `Auto-deleted ${deleteResult.deletedCount} old quizzes and ` +
+        `${questionDeleteResult.deletedCount} questions for user ${userId} ` +
+        `(keeping ${MAX_QUIZZES_PER_USER} most recent)`
+      );
+    }
+  } catch (error) {
+    console.error('Failed to enforce quiz limit:', error);
+    // Don't fail the main operation if cleanup fails
   }
 }
 

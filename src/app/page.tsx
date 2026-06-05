@@ -7,18 +7,16 @@ import { useAuth, useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import {
   Home, MessageCircle, User, Send, Sparkles, Trash2, Brain,
   Bell, CheckCircle, XCircle, Wand2, Trophy, RotateCcw,
-  ChevronRight, Moon, Sun, Cloud, CloudRain, Zap,
-  FileText, Target, BookOpen, Heart, Leaf, Flame,
+  ChevronRight, Sun, Zap,
+  FileText, Target, BookOpen, Leaf, Flame,
   Cpu, Copy, ThumbsUp, RefreshCw, Quote, Clock,
   BarChart3, GraduationCap, Settings, Keyboard, Volume2,
   Pencil, ExternalLink, Shield, LogOut
 } from 'lucide-react';
 
 /* ─── Types ─── */
-type MoodType = 'calm' | 'happy' | 'okay' | 'low' | 'energized';
 type TabType = 'dashboard' | 'quiz' | 'chat' | 'profile';
 
-interface MoodLog { id: string; mood: string; note: string; createdAt: string; }
 interface ChatMsg { id: string; role: string; content: string; createdAt: string; }
 interface DbUser { id: string; clerkId: string; email: string; name: string | null; avatar: string | null; }
 
@@ -46,14 +44,6 @@ const TAB_COLORS: Record<TabType, string> = {
   quiz: 'softly-violet',
   chat: 'softly-sky',
   profile: 'softly-rose',
-};
-
-const MOOD_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-  calm: { icon: <Moon className="w-4 h-4" />, label: 'Calm', color: 'bg-softly-lavender/30 text-violet-600' },
-  happy: { icon: <Heart className="w-4 h-4" />, label: 'Happy', color: 'bg-softly-amber/25 text-amber-700' },
-  okay: { icon: <Cloud className="w-4 h-4" />, label: 'Okay', color: 'bg-softly-sky/25 text-sky-700' },
-  low: { icon: <CloudRain className="w-4 h-4" />, label: 'Low', color: 'bg-softly-sky/15 text-sky-600' },
-  energized: { icon: <Zap className="w-4 h-4" />, label: 'Energized', color: 'bg-softly-coral/25 text-rose-600' },
 };
 
 const DIFFICULTY_CONFIG = {
@@ -147,51 +137,13 @@ function BottomNav({ active, onChange }: { active: TabType; onChange: (t: TabTyp
   );
 }
 
-/* ─── Mood Selector ─── */
-function MoodSelector({ userId, onLogged }: { userId: string; onLogged: () => void }) {
-  const [selected, setSelected] = useState<MoodType | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSelect = async (mood: MoodType) => {
-    setSelected(mood);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/mood', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, mood }),
-      });
-      if (res.ok) {
-        toast.success(`Mood logged: ${MOOD_CONFIG[mood].label}`);
-        onLogged();
-      }
-    } catch { toast.error('Failed to log mood'); }
-    setLoading(false);
-  };
-
-  return (
-    <div className="flex items-center gap-3 flex-wrap">
-      {(Object.entries(MOOD_CONFIG) as [MoodType, typeof MOOD_CONFIG.calm][]).map(([key, cfg]) => (
-        <button key={key} onClick={() => handleSelect(key)} disabled={loading}
-          className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-3 transition-all hover:scale-105 active:scale-95 ${
-            selected === key ? cfg.color + ' border-current' : 'border-transparent bg-softly-stone-100/50'
-          }`}>
-          <span className={selected === key ? '' : 'text-softly-muted'}>{cfg.icon}</span>
-          <span className="text-[10px] font-medium text-softly-muted leading-none">{cfg.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /* ─── Dashboard Panel ─── */
-function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: {
-  dbUser: DbUser; moods: MoodLog[]; quizzes: QuizData[]; onRefreshMoods: () => void; onNavigate: (tab: TabType) => void;
+function DashboardPanel({ dbUser, quizzes, onNavigate }: {
+  dbUser: DbUser; quizzes: QuizData[]; onNavigate: (tab: TabType) => void;
 }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const todayMood = moods.find(m => new Date(m.createdAt).toDateString() === new Date().toDateString());
   const completedQuizzes = quizzes.filter(q => q.score !== null);
   const avgScore = completedQuizzes.length > 0
     ? Math.round(completedQuizzes.reduce((sum, q) => sum + (q.score || 0), 0) / completedQuizzes.length)
@@ -259,36 +211,15 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
         </div>
       </motion.div>
 
-      {/* Mood Check-in + Quick Overview */}
+      {/* Quick Overview */}
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="glass rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Heart className="w-5 h-5 text-softly-rose" />
-            <h2 className="text-lg font-semibold text-softly-dark">
-              {todayMood ? `Feeling ${MOOD_CONFIG[todayMood.mood]?.label || todayMood.mood}` : 'How are you feeling?'}
-            </h2>
-          </div>
-          {!todayMood && <MoodSelector userId={dbUser.id} onLogged={onRefreshMoods} />}
-          {todayMood && (
-            <div className="flex items-center gap-2 text-sm text-softly-muted">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              Mood logged for today
-            </div>
-          )}
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-          className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-softly-sky" />
-            <h2 className="text-lg font-semibold text-softly-dark">Quick Overview</h2>
+            <h2 className="text-lg font-semibold text-softly-dark">Study Overview</h2>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-softly-muted">Mood logs this week</span>
-              <span className="text-sm font-semibold text-softly-dark">{moods.length}</span>
-            </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-softly-muted">Avg quiz score</span>
               <span className="text-sm font-semibold text-softly-dark">{avgScore}%</span>
@@ -298,8 +229,30 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
               <span className="text-sm font-semibold text-softly-dark">{completedQuizzes[0]?.topic || '—'}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-softly-muted">AI Model</span>
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700 flex items-center gap-1"><Cpu className="w-3 h-3" /> Ollama Qwen3.5</span>
+              <span className="text-sm text-softly-muted">Quizzes saved</span>
+              <span className="text-sm font-semibold text-softly-dark">{quizzes.length} / 5</span>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+          className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Cpu className="w-5 h-5 text-softly-sage" />
+            <h2 className="text-lg font-semibold text-softly-dark">AI Model</h2>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">Provider</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700 flex items-center gap-1"><Cpu className="w-3 h-3" /> Ollama Cloud</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">Model</span>
+              <span className="text-sm font-semibold text-softly-dark">Qwen 2.5 VL</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-softly-muted">Chat storage</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sky/20 text-sky-700">Stateless</span>
             </div>
           </div>
         </motion.div>
@@ -873,7 +826,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
             <Send className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-[10px] text-softly-muted text-center mt-2">iStud AI powered by Ollama Qwen3.5</p>
+        <p className="text-[10px] text-softly-muted text-center mt-2">iStud AI powered by Ollama Qwen 2.5 VL (stateless)</p>
       </div>
     </div>
   );
@@ -884,11 +837,6 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
   const [notifs, setNotifs] = useState(true);
   const [sounds, setSounds] = useState(false);
   const [studyMode, setStudyMode] = useState('balanced');
-  const [clearing, setClearing] = useState(false);
-  const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
-  const [ollamaModel, setOllamaModel] = useState('qwen3.5:latest');
-  const [showOllamaConfig, setShowOllamaConfig] = useState(false);
-  const [testingOllama, setTestingOllama] = useState(false);
   const { signOut, userId: clerkId } = useAuth();
   const { user: clerkUser } = useUser();
 
@@ -903,11 +851,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
         if (prefs.studyMode) setStudyMode(prefs.studyMode);
       }
       const ollamaSaved = localStorage.getItem('istud-ollama');
-      if (ollamaSaved) {
-        const ollama = JSON.parse(ollamaSaved);
-        if (ollama.url) setOllamaUrl(ollama.url);
-        if (ollama.model) setOllamaModel(ollama.model);
-      }
+      // ollama config now lives in .env only, ignore localStorage
     } catch {}
   }, []);
 
@@ -917,54 +861,6 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
       localStorage.setItem('istud-preferences', JSON.stringify({ notifs, sounds, studyMode }));
     } catch {}
   }, [notifs, sounds, studyMode]);
-
-  const handleClearChatData = async () => {
-    setClearing(true);
-    try {
-      const res = await fetch('/api/chat/clear', { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Chat data cleared from database');
-      } else {
-        toast.error('Failed to clear chat data');
-      }
-    } catch {
-      toast.error('Failed to clear chat data');
-    }
-    setClearing(false);
-  };
-
-  const handleSaveOllamaConfig = () => {
-    try {
-      localStorage.setItem('istud-ollama', JSON.stringify({ url: ollamaUrl, model: ollamaModel }));
-      toast.success('Ollama configuration saved. Restart the server for changes to take effect.');
-    } catch {
-      toast.error('Failed to save Ollama configuration');
-    }
-  };
-
-  const handleTestOllama = async () => {
-    setTestingOllama(true);
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'Hello, are you working?' }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.response && !data.response.includes('connection issues')) {
-          toast.success('Ollama is working!');
-        } else {
-          toast.error('Ollama is not responding. Make sure it is running.');
-        }
-      } else {
-        toast.error('API error. Check your Ollama configuration.');
-      }
-    } catch {
-      toast.error('Failed to connect to API');
-    }
-    setTestingOllama(false);
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -1049,54 +945,17 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
         </div>
       </div>
 
-      {/* Ollama AI Configuration */}
-      <div className="glass rounded-2xl p-6 space-y-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Cpu className="w-5 h-5 text-softly-amber" /> AI Configuration</h3>
-          <button onClick={() => setShowOllamaConfig(!showOllamaConfig)}
-            className="h-8 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-amber/10 transition-all flex items-center gap-1.5">
-            {showOllamaConfig ? 'Hide' : 'Configure'}
-          </button>
-        </div>
+      {/* AI Info */}
+      <div className="glass rounded-2xl p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Cpu className="w-5 h-5 text-softly-sage" /> AI Configuration</h3>
         <div className="flex items-center gap-3 p-3 rounded-xl bg-softly-sage/20 border border-green-200">
           <Cpu className="w-5 h-5 text-green-600 shrink-0" />
           <div>
-            <p className="text-sm font-medium text-green-700">Ollama {ollamaModel}</p>
-            <p className="text-xs text-green-600">Running at {ollamaUrl}</p>
+            <p className="text-sm font-medium text-green-700">Ollama Qwen 2.5 VL</p>
+            <p className="text-xs text-green-600">Cloud-hosted via ollama.com/api</p>
           </div>
         </div>
-        {showOllamaConfig && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 overflow-hidden">
-            <div>
-              <label className="text-sm font-medium text-softly-dark mb-2 block">Ollama Server URL</label>
-              <input type="text" value={ollamaUrl} onChange={e => setOllamaUrl(e.target.value)}
-                placeholder="http://localhost:11434"
-                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-amber focus:ring-2 focus:ring-softly-amber/20 transition-all" />
-              <p className="text-xs text-softly-muted mt-1">Default: http://localhost:11434 (change this in .env for server-side)</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-softly-dark mb-2 block">Model Name</label>
-              <input type="text" value={ollamaModel} onChange={e => setOllamaModel(e.target.value)}
-                placeholder="qwen3.5:latest"
-                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-amber focus:ring-2 focus:ring-softly-amber/20 transition-all" />
-              <p className="text-xs text-softly-muted mt-1">Make sure the model is pulled: <code className="bg-softly-stone-100 px-1 rounded">ollama pull qwen3.5</code></p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={handleTestOllama} disabled={testingOllama}
-                className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-amber/10 transition-all disabled:opacity-50 flex items-center gap-2">
-                {testingOllama ? (
-                  <><div className="w-3 h-3 border-2 border-softly-stone-300 border-t-softly-amber rounded-full animate-spin" /> Testing...</>
-                ) : (
-                  <><Zap className="w-3.5 h-3.5" /> Test Connection</>
-                )}
-              </button>
-              <button onClick={handleSaveOllamaConfig}
-                className="h-9 px-4 rounded-full bg-softly-amber text-softly-dark text-xs font-medium shadow-[0_4px_16px_rgba(245,200,120,0.4)] hover:bg-softly-amber-light transition-all flex items-center gap-2">
-                <CheckCircle className="w-3.5 h-3.5" /> Save Config
-              </button>
-            </div>
-          </motion.div>
-        )}
+        <p className="text-xs text-softly-muted">AI model is configured via server environment variables. Chat is stateless — no data is stored in the database.</p>
       </div>
 
       {/* Preferences */}
@@ -1141,28 +1000,6 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
           ))}
         </div>
       </div>
-
-      {/* Data Management */}
-      <div className="glass rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Trash2 className="w-5 h-5 text-softly-amber" /> Data Management</h3>
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <p className="text-sm font-medium text-softly-dark">Clear Chat Data</p>
-            <p className="text-xs text-softly-muted">Remove all saved chat messages from database</p>
-          </div>
-          <button
-            onClick={handleClearChatData}
-            disabled={clearing}
-            className="h-9 px-4 rounded-full border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-all disabled:opacity-50 flex items-center gap-2"
-          >
-            {clearing ? (
-              <><div className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" /> Clearing...</>
-            ) : (
-              <><Trash2 className="w-3.5 h-3.5" /> Clear</>
-            )}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1194,7 +1031,6 @@ export default function IStudApp() {
   const { user: clerkUser } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
-  const [moods, setMoods] = useState<MoodLog[]>([]);
   const [quizzes, setQuizzes] = useState<QuizData[]>([]);
 
   // Sync Clerk user to DB and fetch data
@@ -1219,14 +1055,7 @@ export default function IStudApp() {
           const data = await res.json();
           setDbUser(data.user);
 
-          const [moodsRes, quizzesRes] = await Promise.all([
-            fetch(`/api/mood?userId=${data.user.id}`),
-            fetch(`/api/quiz?userId=${data.user.id}`),
-          ]);
-          if (moodsRes.ok && !cancelled) {
-            const moodsData = await moodsRes.json();
-            setMoods(moodsData.moods || []);
-          }
+          const quizzesRes = await fetch(`/api/quiz?userId=${data.user.id}`);
           if (quizzesRes.ok && !cancelled) {
             const quizzesData = await quizzesRes.json();
             setQuizzes(quizzesData.quizzes || []);
@@ -1241,17 +1070,6 @@ export default function IStudApp() {
 
     return () => { cancelled = true; };
   }, [isSignedIn, clerkUser, userId]);
-
-  const fetchMoods = useCallback(async () => {
-    if (!dbUser) return;
-    try {
-      const res = await fetch(`/api/mood?userId=${dbUser.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMoods(data.moods || []);
-      }
-    } catch { /* ignore */ }
-  }, [dbUser]);
 
   const fetchQuizzes = useCallback(async () => {
     if (!dbUser) return;
@@ -1294,7 +1112,7 @@ export default function IStudApp() {
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <motion.div key="dashboard" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-              <DashboardPanel dbUser={dbUser} moods={moods} quizzes={quizzes} onRefreshMoods={fetchMoods} onNavigate={setActiveTab} />
+              <DashboardPanel dbUser={dbUser} quizzes={quizzes} onNavigate={setActiveTab} />
             </motion.div>
           )}
           {activeTab === 'quiz' && (
