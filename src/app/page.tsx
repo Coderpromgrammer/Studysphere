@@ -41,18 +41,25 @@ interface QuizData {
   questions: { id: string; question: string; options: string; correctIdx: number }[];
 }
 
+const TAB_COLORS: Record<TabType, string> = {
+  dashboard: 'softly-teal',
+  quiz: 'softly-violet',
+  chat: 'softly-sky',
+  profile: 'softly-rose',
+};
+
 const MOOD_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   calm: { icon: <Moon className="w-4 h-4" />, label: 'Calm', color: 'bg-softly-lavender/30 text-violet-600' },
-  happy: { icon: <Heart className="w-4 h-4" />, label: 'Happy', color: 'bg-softly-coral/20 text-softly-coral' },
-  okay: { icon: <Cloud className="w-4 h-4" />, label: 'Okay', color: 'bg-softly-stone-100 text-softly-muted' },
-  low: { icon: <CloudRain className="w-4 h-4" />, label: 'Low', color: 'bg-blue-50 text-blue-600' },
-  energized: { icon: <Zap className="w-4 h-4" />, label: 'Energized', color: 'bg-softly-peach text-rose-600' },
+  happy: { icon: <Heart className="w-4 h-4" />, label: 'Happy', color: 'bg-softly-amber/25 text-amber-700' },
+  okay: { icon: <Cloud className="w-4 h-4" />, label: 'Okay', color: 'bg-softly-sky/25 text-sky-700' },
+  low: { icon: <CloudRain className="w-4 h-4" />, label: 'Low', color: 'bg-softly-sky/15 text-sky-600' },
+  energized: { icon: <Zap className="w-4 h-4" />, label: 'Energized', color: 'bg-softly-coral/25 text-rose-600' },
 };
 
 const DIFFICULTY_CONFIG = {
   easy: { label: 'Easy', icon: <Leaf className="w-5 h-5" />, color: 'bg-softly-sage text-green-700' },
-  medium: { label: 'Medium', icon: <Flame className="w-5 h-5" />, color: 'bg-softly-peach text-rose-600' },
-  hard: { label: 'Hard', icon: <Zap className="w-5 h-5" />, color: 'bg-softly-coral/20 text-softly-coral' },
+  medium: { label: 'Medium', icon: <Flame className="w-5 h-5" />, color: 'bg-softly-amber text-amber-700' },
+  hard: { label: 'Hard', icon: <Zap className="w-5 h-5" />, color: 'bg-softly-rose text-rose-600' },
 };
 
 const QUOTES = [
@@ -63,12 +70,12 @@ const QUOTES = [
 ];
 
 const CHAT_SUGGESTIONS = [
-  { label: 'Study tips', message: 'Give me some effective study tips for CBSE board exams' },
-  { label: 'Motivation', message: 'I need some motivation to keep studying' },
-  { label: 'Explain a topic', message: 'Can you help me understand photosynthesis in simple terms?' },
-  { label: 'Solve a doubt', message: 'Solve this step by step: Find the area of a triangle with base 8cm and height 5cm' },
-  { label: 'Time management', message: 'How can I manage my study time better for Class 10 boards?' },
-  { label: 'Essay help', message: 'Help me write an outline for an essay on climate change' },
+  { label: 'Study tips', message: 'Give me some effective study tips for CBSE board exams', color: 'softly-teal' },
+  { label: 'Motivation', message: 'I need some motivation to keep studying', color: 'softly-amber' },
+  { label: 'Explain a topic', message: 'Can you help me understand photosynthesis in simple terms?', color: 'softly-violet' },
+  { label: 'Solve a doubt', message: 'Solve this step by step: Find the area of a triangle with base 8cm and height 5cm', color: 'softly-sky' },
+  { label: 'Time management', message: 'How can I manage my study time better for Class 10 boards?', color: 'softly-sage' },
+  { label: 'Essay help', message: 'Help me write an outline for an essay on climate change', color: 'softly-rose' },
 ];
 
 /* ─── Sidebar ─── */
@@ -83,8 +90,8 @@ function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType)
   return (
     <aside className="hidden md:flex flex-col w-56 glass-strong border-r border-softly-stone-200/60 shrink-0">
       <div className="flex items-center gap-3 px-5 h-16 border-b border-softly-stone-200/60">
-        <div className="w-9 h-9 rounded-full bg-softly-coral/20 flex items-center justify-center">
-          <span className="font-accent text-xl text-softly-coral">i</span>
+        <div className={`w-9 h-9 rounded-full bg-softly-teal/20 flex items-center justify-center`}>
+          <span className="font-accent text-xl text-softly-teal">i</span>
         </div>
         <span className="text-lg font-bold text-softly-dark">iStud</span>
       </div>
@@ -92,13 +99,13 @@ function Sidebar({ active, onChange }: { active: TabType; onChange: (t: TabType)
         {items.map(item => (
           <button key={item.key} onClick={() => onChange(item.key)}
             className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all relative ${
-              active === item.key ? 'bg-softly-coral/15 text-softly-dark' : 'text-softly-muted hover:bg-softly-stone-100 hover:text-softly-dark'
+              active === item.key ? `bg-${TAB_COLORS[active]}/15 text-softly-dark` : 'text-softly-muted hover:bg-softly-stone-100 hover:text-softly-dark'
             }`}>
             {active === item.key && (
-              <motion.div layoutId="sidebar-active" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-softly-coral rounded-r-full"
+              <motion.div layoutId="sidebar-active" className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-${TAB_COLORS[active]} rounded-r-full`}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
             )}
-            <span className={active === item.key ? 'text-softly-coral' : ''}>{item.icon}</span>
+            <span className={active === item.key ? `text-${TAB_COLORS[item.key]}` : ''}>{item.icon}</span>
             {item.label}
           </button>
         ))}
@@ -127,10 +134,10 @@ function BottomNav({ active, onChange }: { active: TabType; onChange: (t: TabTyp
         {items.map(item => (
           <button key={item.key} onClick={() => onChange(item.key)}
             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
-              active === item.key ? 'text-softly-coral' : 'text-softly-muted'
+              active === item.key ? `text-${TAB_COLORS[active]}` : 'text-softly-muted'
             }`}>
             <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
-              active === item.key ? 'bg-softly-coral/20' : ''
+              active === item.key ? `bg-${TAB_COLORS[active]}/20` : ''
             }`}>{item.icon}</div>
             <span className="text-[10px] font-medium">{item.label}</span>
           </button>
@@ -169,7 +176,7 @@ function MoodSelector({ userId, onLogged }: { userId: string; onLogged: () => vo
           className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-3 transition-all hover:scale-105 active:scale-95 ${
             selected === key ? cfg.color + ' border-current' : 'border-transparent bg-softly-stone-100/50'
           }`}>
-          <span className={selected === key ? 'text-softly-coral' : 'text-softly-muted'}>{cfg.icon}</span>
+          <span className={selected === key ? '' : 'text-softly-muted'}>{cfg.icon}</span>
           <span className="text-[10px] font-medium text-softly-muted leading-none">{cfg.label}</span>
         </button>
       ))}
@@ -193,24 +200,24 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
   const studyStreak = Math.min(completedQuizzes.length, 7); // Simplified streak
 
   const stats = [
-    { label: 'Quizzes Taken', value: completedQuizzes.length, icon: <FileText className="w-5 h-5 text-softly-coral" /> },
-    { label: 'Avg Score', value: `${avgScore}%`, icon: <Target className="w-5 h-5 text-softly-coral" /> },
-    { label: 'Total Quizzes', value: quizzes.length, icon: <BookOpen className="w-5 h-5 text-softly-coral" /> },
-    { label: 'Study Streak', value: `${studyStreak}d`, icon: <Flame className="w-5 h-5 text-softly-coral" /> },
+    { label: 'Quizzes Taken', value: completedQuizzes.length, icon: <FileText className="w-5 h-5 text-softly-teal" />, iconBg: 'bg-softly-teal/10', iconBgHover: 'bg-softly-teal/20' },
+    { label: 'Avg Score', value: `${avgScore}%`, icon: <Target className="w-5 h-5 text-softly-amber" />, iconBg: 'bg-softly-amber/10', iconBgHover: 'bg-softly-amber/20' },
+    { label: 'Total Quizzes', value: quizzes.length, icon: <BookOpen className="w-5 h-5 text-softly-violet" />, iconBg: 'bg-softly-violet/10', iconBgHover: 'bg-softly-violet/20' },
+    { label: 'Study Streak', value: `${studyStreak}d`, icon: <Flame className="w-5 h-5 text-softly-coral" />, iconBg: 'bg-softly-coral/10', iconBgHover: 'bg-softly-coral/20' },
   ];
 
   const quickActions = [
-    { label: 'Generate Quiz', desc: 'Create an AI quiz on any topic', icon: <Brain className="w-5 h-5 text-softly-coral" />, tab: 'quiz' as TabType },
-    { label: 'Ask AI Buddy', desc: 'Chat with your study companion', icon: <MessageCircle className="w-5 h-5 text-violet-600" />, tab: 'chat' as TabType },
-    { label: 'Take a Quiz', desc: 'Browse your quiz history', icon: <Wand2 className="w-5 h-5 text-rose-500" />, tab: 'quiz' as TabType },
-    { label: 'Edit Profile', desc: 'Update your account settings', icon: <Settings className="w-5 h-5 text-softly-muted" />, tab: 'profile' as TabType },
+    { label: 'Generate Quiz', desc: 'Create an AI quiz on any topic', icon: <Brain className="w-5 h-5 text-softly-violet" />, tab: 'quiz' as TabType, hoverBg: 'group-hover:bg-softly-violet/10' },
+    { label: 'Ask AI Buddy', desc: 'Chat with your study companion', icon: <MessageCircle className="w-5 h-5 text-softly-sky" />, tab: 'chat' as TabType, hoverBg: 'group-hover:bg-softly-sky/10' },
+    { label: 'Take a Quiz', desc: 'Browse your quiz history', icon: <Wand2 className="w-5 h-5 text-softly-amber" />, tab: 'quiz' as TabType, hoverBg: 'group-hover:bg-softly-amber/10' },
+    { label: 'Edit Profile', desc: 'Update your account settings', icon: <Settings className="w-5 h-5 text-softly-rose" />, tab: 'profile' as TabType, hoverBg: 'group-hover:bg-softly-rose/10' },
   ];
 
   return (
     <div className="space-y-6">
       {/* Greeting */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-softly-dark">{greeting}, <span className="text-softly-coral">{dbUser.name || 'there'}</span></h1>
+        <h1 className="text-3xl font-bold text-softly-dark">{greeting}, <span className="text-softly-teal">{dbUser.name || 'there'}</span></h1>
         <p className="text-softly-muted mt-1">{today}</p>
       </motion.div>
 
@@ -221,7 +228,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
             className="glass rounded-2xl p-5 hover:-translate-y-1 transition-transform cursor-default group">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-softly-coral/10 flex items-center justify-center group-hover:bg-softly-coral/20 transition-colors">
+              <div className={`w-10 h-10 rounded-xl ${stat.iconBg} flex items-center justify-center ${stat.iconBgHover} transition-colors`}>
                 {stat.icon}
               </div>
             </div>
@@ -234,7 +241,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
       {/* Quick Actions */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <h2 className="text-lg font-semibold text-softly-dark flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-softly-coral" />
+          <Sparkles className="w-5 h-5 text-softly-teal" />
           Quick Actions
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -242,7 +249,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
             <motion.button key={action.label} onClick={() => onNavigate(action.tab)}
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.05 }}
               className="glass rounded-2xl p-4 text-left hover:-translate-y-1 transition-transform group">
-              <div className="w-10 h-10 rounded-xl bg-softly-stone-100 flex items-center justify-center group-hover:bg-softly-coral/10 transition-colors mb-3">
+              <div className={`w-10 h-10 rounded-xl bg-softly-stone-100 flex items-center justify-center ${action.hoverBg} transition-colors mb-3`}>
                 {action.icon}
               </div>
               <p className="text-sm font-medium text-softly-dark">{action.label}</p>
@@ -257,7 +264,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="glass rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Heart className="w-5 h-5 text-softly-coral" />
+            <Heart className="w-5 h-5 text-softly-rose" />
             <h2 className="text-lg font-semibold text-softly-dark">
               {todayMood ? `Feeling ${MOOD_CONFIG[todayMood.mood]?.label || todayMood.mood}` : 'How are you feeling?'}
             </h2>
@@ -274,7 +281,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
           className="glass rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-5 h-5 text-softly-coral" />
+            <BarChart3 className="w-5 h-5 text-softly-sky" />
             <h2 className="text-lg font-semibold text-softly-dark">Quick Overview</h2>
           </div>
           <div className="space-y-3">
@@ -302,7 +309,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-softly-dark flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-softly-coral" />
+            <GraduationCap className="w-5 h-5 text-softly-amber" />
             Recent Quizzes
           </h2>
         </div>
@@ -319,7 +326,7 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
                   </div>
                   <h3 className="font-medium text-softly-dark mb-2">{quiz.title}</h3>
                   <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-softly-coral" />
+                    <Trophy className="w-4 h-4 text-softly-amber" />
                     <span className="text-sm font-semibold text-softly-dark">{quiz.score}/{quiz.totalQuestions}</span>
                     <span className="text-xs text-softly-muted">({Math.round(((quiz.score || 0) / quiz.totalQuestions) * 100)}%)</span>
                   </div>
@@ -329,9 +336,9 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
           </div>
         ) : (
           <div className="glass rounded-2xl p-8 text-center">
-            <Brain className="w-8 h-8 text-softly-coral mx-auto mb-3" />
+            <Brain className="w-8 h-8 text-softly-violet mx-auto mb-3" />
             <p className="text-softly-muted mb-1">No quizzes yet</p>
-            <button onClick={() => onNavigate('quiz')} className="font-accent text-xl text-softly-coral hover:underline">take your first quiz!</button>
+            <button onClick={() => onNavigate('quiz')} className="font-accent text-xl text-softly-violet hover:underline">take your first quiz!</button>
           </div>
         )}
       </motion.div>
@@ -339,9 +346,9 @@ function DashboardPanel({ dbUser, moods, quizzes, onRefreshMoods, onNavigate }: 
       {/* Quote */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
         className="bg-white rounded-2xl p-6 relative overflow-hidden border border-softly-stone-100">
-        <Quote className="absolute top-4 left-4 w-8 h-8 text-softly-coral/20" />
+        <Quote className="absolute top-4 left-4 w-8 h-8 text-softly-amber/20" />
         <p className="text-lg leading-relaxed text-softly-dark relative z-10 mt-4 pl-6">
-          {quote.text}<span className="font-accent text-2xl text-softly-coral">{quote.highlight}</span>.
+          {quote.text}<span className="font-accent text-2xl text-softly-amber">{quote.highlight}</span>.
         </p>
         <p className="text-sm text-softly-muted mt-3 relative z-10 pl-6">— {quote.author}</p>
       </motion.div>
@@ -497,7 +504,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
   };
 
   const getOptionStyle = (idx: number) => {
-    if (!answered || !quizQuestions) return 'border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5';
+    if (!answered || !quizQuestions) return 'border-softly-stone-200 hover:border-softly-violet hover:bg-softly-violet/5';
     if (idx === quizQuestions[currentQ].correctIdx) return 'border-softly-success bg-softly-sage';
     if (idx === selectedAnswer && idx !== quizQuestions[currentQ].correctIdx) return 'border-softly-error bg-red-50';
     return 'border-softly-stone-200 opacity-50';
@@ -511,12 +518,12 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
   };
 
   const getResultMessage = () => {
-    if (!quizQuestions) return { text: '', icon: <Trophy className="w-6 h-6 text-softly-coral" /> };
+    if (!quizQuestions) return { text: '', icon: <Trophy className="w-6 h-6 text-softly-amber" /> };
     const pct = score / quizQuestions.length;
-    if (pct === 1) return { text: 'Perfect score!', icon: <Trophy className="w-6 h-6 text-softly-coral" /> };
+    if (pct === 1) return { text: 'Perfect score!', icon: <Trophy className="w-6 h-6 text-softly-amber" /> };
     if (pct >= 0.7) return { text: 'Great job!', icon: <ThumbsUp className="w-6 h-6 text-green-600" /> };
     if (pct >= 0.5) return { text: 'Good effort!', icon: <CheckCircle className="w-6 h-6 text-blue-600" /> };
-    return { text: 'Keep studying!', icon: <BookOpen className="w-6 h-6 text-softly-coral" /> };
+    return { text: 'Keep studying!', icon: <BookOpen className="w-6 h-6 text-softly-violet" /> };
   };
 
   return (
@@ -527,7 +534,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
           <p className="text-softly-muted mt-1">Generate AI-powered quizzes on any topic</p>
         </div>
         <button onClick={() => setShowHistory(!showHistory)}
-          className="h-11 px-5 rounded-full glass text-softly-dark font-medium text-sm hover:bg-softly-coral/10 transition-all flex items-center gap-2">
+          className="h-11 px-5 rounded-full glass text-softly-dark font-medium text-sm hover:bg-softly-violet/10 transition-all flex items-center gap-2">
           <RotateCcw className="w-4 h-4" /> {showHistory ? 'Back to Quiz' : 'History'}
         </button>
       </div>
@@ -557,10 +564,10 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                         <div className="mt-3">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-sm font-medium text-softly-dark">{quiz.score}/{quiz.totalQuestions}</span>
-                            <span className="text-sm font-semibold text-softly-coral">{pct}%</span>
+                            <span className="text-sm font-semibold text-softly-violet">{pct}%</span>
                           </div>
                           <div className="w-full h-2 bg-softly-stone-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-softly-coral rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-softly-violet rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       )}
@@ -570,27 +577,27 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
               </div>
             ) : (
               <div className="glass rounded-2xl p-8 text-center">
-                <Brain className="w-8 h-8 text-softly-coral mx-auto mb-3" />
+                <Brain className="w-8 h-8 text-softly-violet mx-auto mb-3" />
                 <p className="text-softly-muted mb-1">No quiz history yet</p>
-                <p className="font-accent text-xl text-softly-coral">generate your first quiz!</p>
+                <p className="font-accent text-xl text-softly-violet">generate your first quiz!</p>
               </div>
             )}
           </motion.div>
         ) : quizComplete && quizQuestions ? (
           <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
             <div className="glass-strong rounded-3xl p-8 md:p-12 relative overflow-hidden text-center">
-              <div className="absolute -top-24 -left-24 w-48 h-48 bg-softly-coral/15 blob-shape blur-3xl animate-softly-float" />
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-softly-violet/15 blob-shape blur-3xl animate-softly-float" />
               <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-softly-sage/20 blob-shape blur-3xl animate-softly-float" style={{ animationDelay: '3s' }} />
               <div className="relative z-10">
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}>
-                  <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 rounded-full bg-softly-violet/20 flex items-center justify-center mx-auto mb-4">
                     {getResultMessage().icon}
                   </div>
                 </motion.div>
                 <h2 className="text-3xl font-bold text-softly-dark mb-2">Quiz Complete!</h2>
                 <p className="text-softly-muted mb-6">{topic}</p>
                 <div className="inline-flex items-center gap-3 glass rounded-full px-6 py-3 mb-4">
-                  <span className="text-4xl font-bold text-softly-coral">{score}</span>
+                  <span className="text-4xl font-bold text-softly-amber">{score}</span>
                   <span className="text-softly-muted">out of</span>
                   <span className="text-4xl font-bold text-softly-dark">{quizQuestions.length}</span>
                 </div>
@@ -598,7 +605,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                   {Math.round((score / quizQuestions.length) * 100)}% — {getResultMessage().text}
                 </div>
                 <button onClick={resetQuiz}
-                  className="h-12 px-8 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2 mx-auto">
+                  className="h-12 px-8 rounded-full bg-softly-violet text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(184,169,232,0.4)] hover:bg-softly-violet-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2 mx-auto">
                   <Wand2 className="w-5 h-5" /> Generate Another Quiz
                 </button>
               </div>
@@ -607,14 +614,14 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
         ) : quizQuestions ? (
           <motion.div key="quiz-taking" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="glass-strong rounded-3xl p-6 md:p-8 relative overflow-hidden">
-              <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
+              <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-violet/15 blob-shape blur-2xl animate-softly-float" />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-medium text-softly-muted">Question {currentQ + 1} of {quizQuestions.length}</span>
-                  <span className="text-sm font-medium text-softly-coral">Score: {score}</span>
+                  <span className="text-sm font-medium text-softly-violet">Score: {score}</span>
                 </div>
                 <div className="w-full h-2 bg-softly-stone-200 rounded-full mb-6 overflow-hidden">
-                  <div className="h-full bg-softly-coral rounded-full transition-all duration-500"
+                  <div className="h-full bg-softly-violet rounded-full transition-all duration-500"
                     style={{ width: `${((currentQ + (answered ? 1 : 0)) / quizQuestions.length) * 100}%` }} />
                 </div>
                 <h2 className="text-xl font-semibold text-softly-dark mb-6">{quizQuestions[currentQ].question}</h2>
@@ -624,7 +631,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                       disabled={answered}
                       className={`w-full flex items-center gap-3 rounded-xl p-4 text-left border-2 transition-all ${getOptionStyle(idx)}`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-medium ${
-                        selectedAnswer === idx && !answered ? 'bg-softly-coral text-softly-dark' :
+                        selectedAnswer === idx && !answered ? 'bg-softly-violet text-softly-dark' :
                         answered && idx === quizQuestions[currentQ].correctIdx ? 'bg-green-100 text-green-700' :
                         answered && idx === selectedAnswer ? 'bg-red-100 text-red-700' :
                         'bg-softly-stone-100 text-softly-muted'
@@ -638,7 +645,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                 {answered && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 flex justify-end">
                     <button onClick={handleNext}
-                      className="h-11 px-6 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2">
+                      className="h-11 px-6 rounded-full bg-softly-violet text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(184,169,232,0.4)] hover:bg-softly-violet-light hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2">
                       {currentQ < quizQuestions.length - 1 ? 'Next Question' : 'See Results'}
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -650,12 +657,12 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
         ) : (
           <motion.div key="generator" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="glass-strong rounded-3xl p-6 md:p-8 relative overflow-hidden">
-              <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
+              <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-violet/15 blob-shape blur-2xl animate-softly-float" />
               <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-softly-lavender/20 blob-shape blur-2xl animate-softly-float" style={{ animationDelay: '2s' }} />
               <div className="relative z-10 space-y-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-softly-coral/20 flex items-center justify-center">
-                    <Wand2 className="w-5 h-5 text-softly-coral" />
+                  <div className="w-10 h-10 rounded-full bg-softly-violet/20 flex items-center justify-center">
+                    <Wand2 className="w-5 h-5 text-softly-violet" />
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-softly-dark">Create a Quiz</h2>
@@ -666,7 +673,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                   <label className="text-sm font-medium text-softly-dark mb-2 block">Topic</label>
                   <input type="text" value={topic} onChange={e => setTopic(e.target.value)}
                     placeholder="e.g., World War II, Python Programming, Cell Biology..."
-                    className="w-full h-12 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+                    className="w-full h-12 px-4 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-violet focus:ring-2 focus:ring-softly-violet/20 transition-all" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-softly-dark mb-2 block">Difficulty</label>
@@ -674,7 +681,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                     {(Object.entries(DIFFICULTY_CONFIG) as [keyof typeof DIFFICULTY_CONFIG, typeof DIFFICULTY_CONFIG.easy][]).map(([key, cfg]) => (
                       <button key={key} onClick={() => setDifficulty(key)}
                         className={`flex-1 flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-all ${
-                          difficulty === key ? cfg.color + ' border-current' : 'border-softly-stone-200 hover:border-softly-coral'
+                          difficulty === key ? cfg.color + ' border-current' : 'border-softly-stone-200 hover:border-softly-violet'
                         }`}>
                         {cfg.icon}
                         <span className="text-sm font-medium">{cfg.label}</span>
@@ -688,7 +695,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                     {[5, 10, 15].map(n => (
                       <button key={n} onClick={() => setNumQuestions(n)}
                         className={`flex-1 h-11 rounded-xl border-2 text-sm font-medium transition-all ${
-                          numQuestions === n ? 'bg-softly-coral/15 border-softly-coral text-softly-dark' : 'border-softly-stone-200 text-softly-muted hover:border-softly-coral'
+                          numQuestions === n ? 'bg-softly-violet/15 border-softly-violet text-softly-dark' : 'border-softly-stone-200 text-softly-muted hover:border-softly-violet'
                         }`}>
                         {n} Questions
                       </button>
@@ -696,7 +703,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
                   </div>
                 </div>
                 <button onClick={handleGenerate} disabled={generating || !topic.trim()}
-                  className="w-full h-12 rounded-full bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center gap-2">
+                  className="w-full h-12 rounded-full bg-softly-violet text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(184,169,232,0.4)] hover:bg-softly-violet-light hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center gap-2">
                   {generating ? (
                     <>
                       <div className="w-4 h-4 border-2 border-softly-dark/30 border-t-softly-dark rounded-full animate-spin" />
@@ -715,7 +722,7 @@ function QuizMakerPanel({ dbUser, onQuizzesChange }: { dbUser: DbUser; onQuizzes
               <div className="flex flex-wrap gap-2">
                 {['JavaScript', 'Biology', 'History', 'Mathematics', 'Physics', 'Geography', 'Chemistry', 'Literature'].map(t => (
                   <button key={t} onClick={() => setTopic(t)}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-softly-stone-100 text-softly-muted hover:bg-softly-coral/15 hover:text-softly-dark transition-all">
+                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-softly-stone-100 text-softly-muted hover:bg-softly-violet/15 hover:text-softly-dark transition-all">
                     {t}
                   </button>
                 ))}
@@ -772,8 +779,8 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
       {/* Chat Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-softly-lavender/30 flex items-center justify-center">
-            <Cpu className="w-5 h-5 text-violet-600" />
+          <div className="w-10 h-10 rounded-xl bg-softly-teal/20 flex items-center justify-center">
+            <Cpu className="w-5 h-5 text-softly-teal" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-softly-dark">AI Study Buddy</h1>
@@ -784,7 +791,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
           </div>
         </div>
         <button onClick={() => { setMessages([]); toast.success('Chat cleared'); }}
-          className="h-9 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-1.5">
+          className="h-9 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-teal/10 transition-all flex items-center gap-1.5">
           <Trash2 className="w-3.5 h-3.5" /> Clear
         </button>
       </div>
@@ -793,8 +800,8 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
       <div className="flex-1 overflow-y-auto softly-scrollbar space-y-4 pr-2 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-softly-lavender/30 flex items-center justify-center">
-              <Cpu className="w-8 h-8 text-violet-600" />
+            <div className="w-16 h-16 rounded-2xl bg-softly-teal/20 flex items-center justify-center">
+              <Cpu className="w-8 h-8 text-softly-teal" />
             </div>
             <div className="text-center">
               <h3 className="text-lg font-semibold text-softly-dark mb-1">How can I help you study?</h3>
@@ -803,8 +810,8 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
             <div className="flex flex-wrap gap-2 justify-center max-w-md">
               {CHAT_SUGGESTIONS.map(s => (
                 <button key={s.label} onClick={() => handleSend(s.message)}
-                  className="px-4 py-2 rounded-xl glass text-sm text-softly-dark hover:bg-softly-coral/10 transition-all flex items-center gap-2 border border-softly-stone-200/50">
-                  <MessageCircle className="w-3.5 h-3.5 text-softly-coral" />
+                  className={`px-4 py-2 rounded-xl glass text-sm text-softly-dark hover:bg-${s.color}/10 transition-all flex items-center gap-2 border border-softly-stone-200/50`}>
+                  <MessageCircle className={`w-3.5 h-3.5 text-${s.color}`} />
                   {s.label}
                 </button>
               ))}
@@ -814,12 +821,12 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
         {messages.map(msg => (
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-lg bg-softly-lavender/30 flex items-center justify-center shrink-0 mt-1">
-                <Cpu className="w-4 h-4 text-violet-600" />
+              <div className="w-8 h-8 rounded-lg bg-softly-teal/20 flex items-center justify-center shrink-0 mt-1">
+                <Cpu className="w-4 h-4 text-softly-teal" />
               </div>
             )}
             <div className={`max-w-[75%] rounded-2xl px-4 py-3 group relative ${
-              msg.role === 'user' ? 'bg-softly-coral/15 text-softly-dark' : 'glass text-softly-dark'
+              msg.role === 'user' ? 'bg-softly-teal/15 text-softly-dark' : 'bg-softly-teal/10 text-softly-dark'
             }`}>
               <p className="text-sm leading-relaxed whitespace-pre-wrap pr-6">{msg.content}</p>
               <div className="flex items-center justify-between mt-2">
@@ -839,14 +846,14 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
         ))}
         {loading && (
           <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded-lg bg-softly-lavender/30 flex items-center justify-center shrink-0">
-              <RefreshCw className="w-4 h-4 text-violet-600 animate-spin" />
+            <div className="w-8 h-8 rounded-lg bg-softly-teal/20 flex items-center justify-center shrink-0">
+              <RefreshCw className="w-4 h-4 text-softly-teal animate-spin" />
             </div>
-            <div className="glass rounded-2xl px-4 py-3">
+            <div className="bg-softly-teal/10 rounded-2xl px-4 py-3">
               <div className="flex gap-1.5">
-                <span className="w-2 h-2 bg-softly-coral rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-softly-coral rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-softly-coral rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-2 h-2 bg-softly-teal rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-softly-teal rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-softly-teal rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -862,7 +869,7 @@ function ChatPanel({ dbUser }: { dbUser: DbUser }) {
             placeholder="Ask your study buddy..." disabled={loading}
             className="flex-1 bg-transparent text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none px-3 py-2" />
           <button onClick={() => handleSend()} disabled={!input.trim() || loading}
-            className="h-10 w-10 rounded-xl bg-softly-coral text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center">
+            className="h-10 w-10 rounded-xl bg-softly-teal text-softly-dark font-medium text-sm shadow-[0_4px_16px_rgba(126,200,200,0.4)] hover:bg-softly-teal-light active:scale-[0.98] transition-all disabled:opacity-45 disabled:pointer-events-none flex items-center justify-center">
             <Send className="w-4 h-4" />
           </button>
         </div>
@@ -965,20 +972,20 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
 
       {/* User Info Card with Clerk Profile Edit */}
       <div className="glass-strong rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-coral/15 blob-shape blur-2xl animate-softly-float" />
+        <div className="absolute -top-16 -right-16 w-32 h-32 bg-softly-rose/15 blob-shape blur-2xl animate-softly-float" />
         <div className="relative z-10 flex items-center gap-5">
           {clerkUser?.imageUrl ? (
-            <img src={clerkUser.imageUrl} alt="Avatar" className="w-16 h-16 rounded-full ring-2 ring-softly-coral/30 object-cover" />
+            <img src={clerkUser.imageUrl} alt="Avatar" className="w-16 h-16 rounded-full ring-2 ring-softly-rose/30 object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-softly-coral/20 flex items-center justify-center ring-2 ring-softly-coral/30">
-              <span className="text-2xl font-bold text-softly-coral">{dbUser.name?.[0]?.toUpperCase() || 'U'}</span>
+            <div className="w-16 h-16 rounded-full bg-softly-rose/20 flex items-center justify-center ring-2 ring-softly-rose/30">
+              <span className="text-2xl font-bold text-softly-rose">{dbUser.name?.[0]?.toUpperCase() || 'U'}</span>
             </div>
           )}
           <div className="flex-1">
             <h2 className="text-xl font-bold text-softly-dark">{clerkUser?.fullName || dbUser.name || 'Student'}</h2>
             <p className="text-sm text-softly-muted">{clerkUser?.emailAddresses?.[0]?.emailAddress || dbUser.email}</p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-coral/20 text-softly-coral flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Active</span>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-rose/20 text-softly-rose flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Active</span>
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-sage text-green-700">Free Plan</span>
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-softly-lavender/40 text-violet-600 flex items-center gap-1"><Brain className="w-3 h-3" /> {quizCount} Quizzes</span>
             </div>
@@ -986,7 +993,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
           <div className="flex flex-col gap-2">
             <button
               onClick={() => { try { (window as any).Clerk?.openUserProfile(); } catch(e) { console.error('Clerk profile error:', e); } }}
-              className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-2 cursor-pointer"
+              className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-rose/10 transition-all flex items-center gap-2 cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5" /> Edit Profile
             </button>
@@ -996,12 +1003,12 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
 
       {/* Account Settings via Clerk */}
       <div className="glass rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><User className="w-5 h-5 text-softly-coral" /> Account Settings</h3>
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><User className="w-5 h-5 text-softly-amber" /> Account Settings</h3>
         <p className="text-sm text-softly-muted">Manage your name, email, password, and connected accounts through your secure Clerk profile.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'profile' }); } catch(e) { console.error(e); } }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
+            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-amber hover:bg-softly-amber/5 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><Pencil className="w-5 h-5" /></div>
             <div>
@@ -1011,7 +1018,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
           </button>
           <button
             onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'account' }); } catch(e) { console.error(e); } }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
+            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-amber hover:bg-softly-amber/5 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><Shield className="w-5 h-5" /></div>
             <div>
@@ -1021,7 +1028,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
           </button>
           <button
             onClick={() => { try { (window as any).Clerk?.openUserProfile({ tab: 'connectedAccounts' }); } catch(e) { console.error(e); } }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-coral hover:bg-softly-coral/5 transition-all text-left"
+            className="flex items-center gap-3 p-4 rounded-xl border border-softly-stone-200 hover:border-softly-amber hover:bg-softly-amber/5 transition-all text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-softly-stone-100 flex items-center justify-center text-softly-muted"><ExternalLink className="w-5 h-5" /></div>
             <div>
@@ -1045,9 +1052,9 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
       {/* Ollama AI Configuration */}
       <div className="glass rounded-2xl p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Cpu className="w-5 h-5 text-softly-coral" /> AI Configuration</h3>
+          <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Cpu className="w-5 h-5 text-softly-amber" /> AI Configuration</h3>
           <button onClick={() => setShowOllamaConfig(!showOllamaConfig)}
-            className="h-8 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all flex items-center gap-1.5">
+            className="h-8 px-3 rounded-full glass text-softly-muted hover:text-softly-dark text-xs font-medium hover:bg-softly-amber/10 transition-all flex items-center gap-1.5">
             {showOllamaConfig ? 'Hide' : 'Configure'}
           </button>
         </div>
@@ -1064,27 +1071,27 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
               <label className="text-sm font-medium text-softly-dark mb-2 block">Ollama Server URL</label>
               <input type="text" value={ollamaUrl} onChange={e => setOllamaUrl(e.target.value)}
                 placeholder="http://localhost:11434"
-                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-amber focus:ring-2 focus:ring-softly-amber/20 transition-all" />
               <p className="text-xs text-softly-muted mt-1">Default: http://localhost:11434 (change this in .env for server-side)</p>
             </div>
             <div>
               <label className="text-sm font-medium text-softly-dark mb-2 block">Model Name</label>
               <input type="text" value={ollamaModel} onChange={e => setOllamaModel(e.target.value)}
                 placeholder="qwen3.5:latest"
-                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-coral focus:ring-2 focus:ring-softly-coral/20 transition-all" />
+                className="w-full h-10 px-3 rounded-xl border border-softly-stone-200 bg-white/60 text-sm text-softly-dark placeholder:text-softly-muted focus:outline-none focus:border-softly-amber focus:ring-2 focus:ring-softly-amber/20 transition-all" />
               <p className="text-xs text-softly-muted mt-1">Make sure the model is pulled: <code className="bg-softly-stone-100 px-1 rounded">ollama pull qwen3.5</code></p>
             </div>
             <div className="flex gap-2">
               <button onClick={handleTestOllama} disabled={testingOllama}
-                className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-coral/10 transition-all disabled:opacity-50 flex items-center gap-2">
+                className="h-9 px-4 rounded-full glass text-softly-dark text-xs font-medium hover:bg-softly-amber/10 transition-all disabled:opacity-50 flex items-center gap-2">
                 {testingOllama ? (
-                  <><div className="w-3 h-3 border-2 border-softly-stone-300 border-t-softly-coral rounded-full animate-spin" /> Testing...</>
+                  <><div className="w-3 h-3 border-2 border-softly-stone-300 border-t-softly-amber rounded-full animate-spin" /> Testing...</>
                 ) : (
                   <><Zap className="w-3.5 h-3.5" /> Test Connection</>
                 )}
               </button>
               <button onClick={handleSaveOllamaConfig}
-                className="h-9 px-4 rounded-full bg-softly-coral text-softly-dark text-xs font-medium shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light transition-all flex items-center gap-2">
+                className="h-9 px-4 rounded-full bg-softly-amber text-softly-dark text-xs font-medium shadow-[0_4px_16px_rgba(245,200,120,0.4)] hover:bg-softly-amber-light transition-all flex items-center gap-2">
                 <CheckCircle className="w-3.5 h-3.5" /> Save Config
               </button>
             </div>
@@ -1094,7 +1101,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
 
       {/* Preferences */}
       <div className="glass rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Settings className="w-5 h-5 text-softly-coral" /> Preferences</h3>
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Settings className="w-5 h-5 text-softly-amber" /> Preferences</h3>
         {[
           { label: 'Notifications', desc: 'Get reminders and updates', icon: <Bell className="w-4 h-4" />, val: notifs, set: setNotifs },
           { label: 'Sound Effects', desc: 'Play sounds on actions', icon: <Volume2 className="w-4 h-4" />, val: sounds, set: setSounds },
@@ -1108,7 +1115,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
               </div>
             </div>
             <button onClick={() => pref.set(!pref.val)}
-              className={`w-11 h-6 rounded-full transition-all relative ${pref.val ? 'bg-softly-coral' : 'bg-softly-stone-200'}`}>
+              className={`w-11 h-6 rounded-full transition-all relative ${pref.val ? 'bg-softly-amber' : 'bg-softly-stone-200'}`}>
               <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${pref.val ? 'left-[22px]' : 'left-0.5'}`} />
             </button>
           </div>
@@ -1117,7 +1124,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
 
       {/* Study Mode */}
       <div className="glass rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Brain className="w-5 h-5 text-softly-coral" /> Study Mode</h3>
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Brain className="w-5 h-5 text-softly-amber" /> Study Mode</h3>
         <div className="grid grid-cols-3 gap-3">
           {[
             { key: 'balanced', label: 'Balanced', icon: <BarChart3 className="w-5 h-5" /> },
@@ -1126,7 +1133,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
           ].map(mode => (
             <button key={mode.key} onClick={() => setStudyMode(mode.key)}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                studyMode === mode.key ? 'bg-softly-coral/10 border-softly-coral text-softly-dark' : 'border-softly-stone-200 text-softly-muted hover:border-softly-coral'
+                studyMode === mode.key ? 'bg-softly-amber/10 border-softly-amber text-softly-dark' : 'border-softly-stone-200 text-softly-muted hover:border-softly-amber'
               }`}>
               {mode.icon}
               <span className="text-xs font-medium">{mode.label}</span>
@@ -1137,7 +1144,7 @@ function ProfilePanel({ dbUser, quizCount }: { dbUser: DbUser; quizCount: number
 
       {/* Data Management */}
       <div className="glass rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Trash2 className="w-5 h-5 text-softly-coral" /> Data Management</h3>
+        <h3 className="text-lg font-semibold text-softly-dark flex items-center gap-2"><Trash2 className="w-5 h-5 text-softly-amber" /> Data Management</h3>
         <div className="flex items-center justify-between py-2">
           <div>
             <p className="text-sm font-medium text-softly-dark">Clear Chat Data</p>
@@ -1166,13 +1173,13 @@ function LandingPage() {
     <div className="min-h-screen flex items-center justify-center bg-softly-bg p-6">
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
         className="text-center max-w-lg">
-        <div className="w-20 h-20 rounded-2xl bg-softly-coral/20 flex items-center justify-center mx-auto mb-6">
-          <GraduationCap className="w-10 h-10 text-softly-coral" />
+        <div className="w-20 h-20 rounded-2xl bg-softly-teal/20 flex items-center justify-center mx-auto mb-6">
+          <GraduationCap className="w-10 h-10 text-softly-teal" />
         </div>
-        <h1 className="text-4xl font-bold text-softly-dark mb-3">Welcome to <span className="text-softly-coral">iStud</span></h1>
+        <h1 className="text-4xl font-bold text-softly-dark mb-3">Welcome to <span className="text-softly-teal">iStud</span></h1>
         <p className="text-softly-muted mb-8 text-lg">Your mindful study companion with AI-powered quizzes, chat, and personalized learning.</p>
         <SignInButton mode="modal">
-          <button className="h-12 px-8 rounded-full bg-softly-coral text-softly-dark font-medium shadow-[0_4px_16px_rgba(255,183,178,0.4)] hover:bg-softly-coral-light hover:-translate-y-0.5 active:scale-[0.98] transition-all">
+          <button className="h-12 px-8 rounded-full bg-softly-teal text-softly-dark font-medium shadow-[0_4px_16px_rgba(126,200,200,0.4)] hover:bg-softly-teal-light hover:-translate-y-0.5 active:scale-[0.98] transition-all">
             Get Started
           </button>
         </SignInButton>
@@ -1260,7 +1267,7 @@ export default function IStudApp() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-softly-bg">
-        <div className="w-8 h-8 border-3 border-softly-coral/30 border-t-softly-coral rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-softly-teal/30 border-t-softly-teal rounded-full animate-spin" />
       </div>
     );
   }
@@ -1273,7 +1280,7 @@ export default function IStudApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-softly-bg">
         <div className="text-center">
-          <div className="w-8 h-8 border-3 border-softly-coral/30 border-t-softly-coral rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-3 border-softly-teal/30 border-t-softly-teal rounded-full animate-spin mx-auto mb-4" />
           <p className="text-softly-muted text-sm">Setting up your account...</p>
         </div>
       </div>

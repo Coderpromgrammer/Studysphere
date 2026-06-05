@@ -7,8 +7,9 @@ import { buildQuizPrompt } from '@/lib/ai/prompts';
 import { parseQuizResponse } from '@/lib/ai/parser';
 import { checkRateLimit } from '@/lib/ai/rate-limit';
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'https://api.ollama.com';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen3.5:latest';
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,11 +49,16 @@ export async function POST(req: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for quiz gen
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (OLLAMA_API_KEY) {
+        headers['Authorization'] = `Bearer ${OLLAMA_API_KEY}`;
+      }
+
       const response = await fetch(`${OLLAMA_BASE_URL}/v1/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           model: OLLAMA_MODEL,
           messages,
@@ -105,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     if (!content) {
       return NextResponse.json(
-        { error: 'Failed to generate quiz. Make sure Ollama is running with `ollama serve` and model `qwen3.5` is pulled with `ollama pull qwen3.5`.' },
+        { error: 'Failed to generate quiz. Please check your Ollama cloud configuration (OLLAMA_BASE_URL and OLLAMA_API_KEY in .env).' },
         { status: 500 }
       );
     }
