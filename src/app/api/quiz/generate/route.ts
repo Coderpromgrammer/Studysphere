@@ -1,15 +1,12 @@
 // ==========================================
-// AI Quiz Generation API — Ollama (Qwen3.5) + z-ai fallback
+// AI Quiz Generation API — Ollama (qwen2.5vl) + z-ai fallback
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { buildQuizPrompt } from '@/lib/ai/prompts';
 import { parseQuizResponse } from '@/lib/ai/parser';
 import { checkRateLimit } from '@/lib/ai/rate-limit';
-
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'https://api.ollama.com';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen3.5:latest';
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
+import { ollamaChat, OLLAMA_MODEL } from '@/lib/ai/ollama-client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,50 +41,15 @@ export async function POST(req: NextRequest) {
 
     let content = '';
 
-    // PRIMARY: Try Ollama Chat Completions API
+    // PRIMARY: Try Ollama via ollama npm package
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for quiz gen
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (OLLAMA_API_KEY) {
-        headers['Authorization'] = `Bearer ${OLLAMA_API_KEY}`;
-      }
-
-      const response = await fetch(`${OLLAMA_BASE_URL}/v1/chat/completions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          messages,
-          max_tokens: 4096,
-          temperature: 0.4,
-        }),
-        signal: controller.signal,
+      content = await ollamaChat(messages, {
+        maxTokens: 4096,
+        temperature: 0.4,
+        timeoutMs: 60000, // 60s for quiz gen
       });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        content = data.choices?.[0]?.message?.content || '';
-        if (content) {
-          // Strip <think/> tags that Qwen3.5 may include
-          content = content.replace(/<think[\s\S]*?<\/think>/g, '').trim();
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('Ollama Quiz API error:', response.status, errorText);
-      }
-    } catch (error: unknown) {
-      const err = error as Error;
-      if (err.name === 'AbortError') {
-        console.error('Ollama Quiz API timeout');
-      } else {
-        console.error('Ollama Quiz API failed:', err.message);
-      }
+    } catch (error) {
+      console.error('Ollama quiz generation failed, will try fallback:', error);
     }
 
     // FALLBACK: Try z-ai-web-dev-sdk
@@ -111,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     if (!content) {
       return NextResponse.json(
-        { error: 'Failed to generate quiz. Please check your Ollama cloud configuration (OLLAMA_BASE_URL and OLLAMA_API_KEY in .env).' },
+        { error: `Failed to generate quiz. Please check your Ollama cloud configuration (OLLAMA_HOST and OLLAMA_MODEL in .env). Current model: ${OLLAMA_MODEL}.` },
         { status: 500 }
       );
     }

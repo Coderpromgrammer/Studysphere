@@ -1,14 +1,11 @@
 // ==========================================
-// AI Solve Doubt API — Ollama (Qwen3.5) + z-ai fallback
+// AI Solve Doubt API — Ollama (qwen2.5vl) + z-ai fallback
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { buildSolvePrompt } from '@/lib/ai/prompts';
 import { checkRateLimit } from '@/lib/ai/rate-limit';
-
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'https://api.ollama.com';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen3.5:latest';
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
+import { ollamaChat, OLLAMA_MODEL } from '@/lib/ai/ollama-client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,46 +37,15 @@ export async function POST(req: NextRequest) {
 
     let aiResponse = '';
 
-    // PRIMARY: Try Ollama Chat Completions API
+    // PRIMARY: Try Ollama via ollama npm package
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (OLLAMA_API_KEY) {
-        headers['Authorization'] = `Bearer ${OLLAMA_API_KEY}`;
-      }
-
-      const response = await fetch(`${OLLAMA_BASE_URL}/v1/chat/completions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          messages,
-          max_tokens: 3072,
-          temperature: 0.4,
-        }),
-        signal: controller.signal,
+      aiResponse = await ollamaChat(messages, {
+        maxTokens: 3072,
+        temperature: 0.4,
+        timeoutMs: 45000,
       });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        aiResponse = data.choices?.[0]?.message?.content || '';
-        if (aiResponse) {
-          // Strip <think/> tags
-          aiResponse = aiResponse.replace(/<think[\s\S]*?<\/think>/g, '').trim();
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('Ollama Solve API error:', response.status, errorText);
-      }
-    } catch (error: unknown) {
-      const err = error as Error;
-      console.error('Ollama Solve API failed:', err.message);
+    } catch (error) {
+      console.error('Ollama solve failed, will try fallback:', error);
     }
 
     // FALLBACK: Try z-ai-web-dev-sdk
@@ -102,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!aiResponse) {
-      aiResponse = "I'm having connection issues right now. Please check your Ollama cloud configuration (OLLAMA_BASE_URL and OLLAMA_API_KEY in .env) and try again!";
+      aiResponse = `I'm having connection issues right now. Please check your Ollama cloud configuration (OLLAMA_HOST and OLLAMA_MODEL in .env). Current model: ${OLLAMA_MODEL}. Try again!`;
     }
 
     return NextResponse.json({ response: aiResponse });
